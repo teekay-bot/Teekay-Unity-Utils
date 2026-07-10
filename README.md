@@ -18,20 +18,22 @@ Pin a version once tags exist: append `#v0.1.0`. Update via Package Manager ▸ 
 
 > Private repo: install works on machines where git is already authenticated to GitHub (Unity shells out to system git).
 
-### Develop the package (file reference, mutable)
+### Develop the package (DevProject~)
 
-Git-URL packages are immutable inside the consuming project. To edit the package, point the manifest at the local clone instead:
+Git-URL packages are immutable inside the consuming project — all package development happens in the embedded host project instead:
 
-```json
-"com.teekay.unity-utils": "file:C:/Users/teeka/GitHub/Personal/Teekay-Unity-Utils"
-```
+1. Open `DevProject~/` in Unity 6000.3.10f1 (add it to Unity Hub once). It references this package via `file:../..`, so the package is **mutable** there: edit under `Packages/Teekay Unity Utils`, and Unity writes `.meta` files back into this repo — commit them.
+2. Run tests via **Window ▸ General ▸ Test Runner** (EditMode + PlayMode tabs). Package tests are visible because `DevProject~/Packages/manifest.json` lists the package in `"testables"` — any other host project needs that same entry to see them.
+3. Commit + push here, tag `vX.Y.Z`, then update consumers.
 
-Edit under `Packages/Teekay Unity Utils` in the Editor (Unity writes `.meta` files back into this repo — commit them), then commit + push here and switch consumers back to the git URL.
+`DevProject~` is invisible to consumers: Unity never imports folders ending in `~` when the package is installed.
 
 ## Layout & conventions
 
 - `Runtime/` — assembly `TeekayUtils`, namespace `TeekayUtils.*`. All runtime code goes here, grouped by folder (`Extensions/`, `Singleton/`, ...).
 - `Editor/` — assembly `TeekayUtils.Editor` (Editor-only, references `TeekayUtils`). Property drawers, editor windows, hotkeys.
+- `Tests/Editor` + `Tests/Runtime` — test assemblies (`TeekayUtils.Tests.Editor` / `TeekayUtils.Tests`), namespace `TeekayUtils.Tests`. Stripped from builds via `UNITY_INCLUDE_TESTS`.
+- `DevProject~/` — dev/test host project, not part of the package payload.
 - Every new file needs its committed `.meta` (edit via the `file:` workflow above so Unity generates them, or hand-author).
 - Version bump + `CHANGELOG.md` entry + git tag `vX.Y.Z` per release.
 
