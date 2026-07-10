@@ -22,7 +22,7 @@ Pin a version once tags exist: append `#v0.1.0`. Update via Package Manager ▸ 
 
 Git-URL packages are immutable inside the consuming project — all package development happens in the embedded host project instead:
 
-1. Open `DevProject~/` in Unity 6000.3.10f1 (add it to Unity Hub once). It references this package via `file:../..`, so the package is **mutable** there: edit under `Packages/Teekay Unity Utils`, and Unity writes `.meta` files back into this repo — commit them.
+1. Open `DevProject~/` in Unity 6000.3.19f1 (add it to Unity Hub once). It references this package via `file:../..`, so the package is **mutable** there: edit under `Packages/Teekay Unity Utils`, and Unity writes `.meta` files back into this repo — commit them.
 2. Run tests via **Window ▸ General ▸ Test Runner** (EditMode + PlayMode tabs). Package tests are visible because `DevProject~/Packages/manifest.json` lists the package in `"testables"` — any other host project needs that same entry to see them.
 3. Commit + push here, tag `vX.Y.Z`, then update consumers.
 
