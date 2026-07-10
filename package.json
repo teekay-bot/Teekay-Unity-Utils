@@ -1,0 +1,16 @@
+{
+  "name": "com.teekay.unity-utils",
+  "version": "0.1.0",
+  "displayName": "Teekay Unity Utils",
+  "description": "Personal collection of Unity utilities: extension methods, helpers, and editor tooling. Inspired by adammyhre/Unity-Utils, trimmed to what I actually use.",
+  "unity": "6000.3",
+  "author": {
+    "name": "Teekay",
+    "url": "https://github.com/teekay-bot"
+  },
+  "keywords": [
+    "utils",
+    "extensions",
+    "helpers"
+  ]
+}

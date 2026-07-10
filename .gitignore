@@ -1,0 +1,16 @@
+# In case the folder is ever opened as / next to a Unity project
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+*.csproj
+*.sln
+*.suo
+*.user
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vs/
+.idea/
