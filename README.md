@@ -37,7 +37,12 @@ Git-URL packages are immutable inside the consuming project — all package deve
 - Every new file needs its committed `.meta` (edit via the `file:` workflow above so Unity generates them, or hand-author).
 - Version bump + `CHANGELOG.md` entry + git tag `vX.Y.Z` per release.
 
-## Roadmap (candidates, nothing ported yet)
+## Ported so far
+
+- **EditorExtensions** (`Editor/Extensions/`) — `PingAndSelect` extension for `Object` (from Unity-Utils, MIT).
+- **EditorFileUtils** (`Editor/Utils/`) — `ConfirmOverwrite`, `BrowseForFolder` static file-dialog helpers (from Unity-Utils, MIT; converted from string extensions).
+
+## Roadmap (candidates)
 
 - **Extensions** — Transform/Vector/Color/GameObject/List/Number/String/... extension methods (from the existing `TeekayUtils` sets in my projects).
 - **Singleton** — `Singleton<T>` / `PersistentSingleton<T>` base classes.
