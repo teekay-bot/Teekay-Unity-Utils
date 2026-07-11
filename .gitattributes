@@ -1,0 +1,37 @@
+# Normalize line endings: git stores LF, checks out native. Kills the
+# "LF will be replaced by CRLF" warnings and avoids line-ending-only diffs.
+* text=auto
+
+# Explicit text types (checked out with the platform's native EOL)
+*.cs        text diff=csharp
+*.meta      text eol=lf
+*.asmdef    text eol=lf
+*.json      text eol=lf
+*.md        text
+*.txt       text
+*.shader    text
+*.cginc     text
+*.hlsl      text
+*.shadergraph text
+*.uss       text
+*.uxml      text
+
+# Unity YAML assets — force LF so Unity's own tooling and cross-platform
+# clones stay byte-consistent
+*.unity     text eol=lf
+*.asset     text eol=lf
+*.prefab    text eol=lf
+*.mat       text eol=lf
+*.anim      text eol=lf
+*.controller text eol=lf
+
+# Binary assets — never touch EOL, never try to merge
+*.png       binary
+*.jpg       binary
+*.ttf       binary
+*.otf       binary
+*.fbx       binary
+*.wav       binary
+*.mp3       binary
+*.ogg       binary
+*.dll       binary
