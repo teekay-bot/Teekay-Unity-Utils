@@ -79,6 +79,31 @@ namespace TeekayUtils
         }
 
         /// <summary>
+        /// Projects this point onto the infinite line through
+        /// <paramref name="lineStart"/> along <paramref name="lineDirection"/>
+        /// (direction does not need to be normalized). Returns the closest point
+        /// on the line; degenerate (zero) directions return lineStart.
+        /// </summary>
+        public static Vector3 ProjectOntoLine(this Vector3 point, Vector3 lineStart, Vector3 lineDirection)
+        {
+            float sqrMagnitude = lineDirection.sqrMagnitude;
+            if (sqrMagnitude < 1e-8f) return lineStart;
+
+            float t = Vector3.Dot(point - lineStart, lineDirection) / sqrMagnitude;
+            return lineStart + lineDirection * t;
+        }
+
+        /// <summary>
+        /// Rotates the vector onto a plane by the rotation that maps
+        /// <paramref name="upDirection"/> onto <paramref name="planeNormal"/>.
+        /// Useful for aligning movement vectors to slopes.
+        /// </summary>
+        public static Vector3 RotateOntoPlane(this Vector3 vector, Vector3 planeNormal, Vector3 upDirection)
+        {
+            return Quaternion.FromToRotation(upDirection, planeNormal) * vector;
+        }
+
+        /// <summary>
         /// Rounds each component down to the nearest multiple of the corresponding
         /// quantization step — e.g. for snapping positions to a grid.
         /// </summary>

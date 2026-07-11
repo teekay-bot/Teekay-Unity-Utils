@@ -79,6 +79,33 @@ namespace TeekayUtils.Tests
             }
         }
 
+        [Test]
+        public void Vector3_ProjectOntoLine_FindsClosestPoint()
+        {
+            // Point above the X axis projects straight down onto it.
+            var projected = new Vector3(3, 5, 0).ProjectOntoLine(Vector3.zero, Vector3.right);
+            Assert.That(projected, Is.EqualTo(new Vector3(3, 0, 0)));
+
+            // Non-normalized direction must give the same answer.
+            var projected2 = new Vector3(3, 5, 0).ProjectOntoLine(Vector3.zero, new Vector3(10, 0, 0));
+            Assert.That(projected2, Is.EqualTo(new Vector3(3, 0, 0)));
+
+            // Degenerate direction falls back to lineStart.
+            var degenerate = new Vector3(3, 5, 0).ProjectOntoLine(Vector3.one, Vector3.zero);
+            Assert.That(degenerate, Is.EqualTo(Vector3.one));
+        }
+
+        [Test]
+        public void Vector3_RotateOntoPlane_PreservesLengthAndLandsOnPlane()
+        {
+            // A vector on the ground plane (up = Y) rotated onto a wall (normal = X)
+            // must stay unit length and become perpendicular to the wall normal.
+            Vector3 rotated = new Vector3(0, 0, 1).RotateOntoPlane(Vector3.right, Vector3.up);
+
+            Assert.That(rotated.magnitude, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(Vector3.Dot(rotated, Vector3.right), Is.EqualTo(0f).Within(1e-4f));
+        }
+
         // --- Numbers ---
 
         [Test]
