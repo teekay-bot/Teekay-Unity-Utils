@@ -42,10 +42,10 @@ Git-URL packages are immutable inside the consuming project — all package deve
 - **EditorExtensions** (`Editor/Extensions/`) — `PingAndSelect` extension for `Object` (from Unity-Utils, MIT).
 - **EditorFileUtils** (`Editor/Utils/`) — `ConfirmOverwrite`, `BrowseForFolder` static file-dialog helpers (from Unity-Utils, MIT; converted from string extensions).
 - **Singleton** (`Runtime/Singleton/`) — `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). Both: first-Awake-wins, duplicates self-destroy with a warning, quit-safe (no ghost objects), no auto-create in Edit mode. (From Unity-Utils, MIT; hardened.)
+- **Extensions** (`Runtime/Extensions/`) — curated runtime extensions (from Unity-Utils, MIT; trimmed, bug-fixed, extended): Vector2/3 (`With`/`Add`/`InRangeOf`/`DirectionTo`/`Rotate`/annulus/`Quantize`), Transform (`Children`/`Reset`/`ForEveryChild`/destroy-enable-disable children), GameObject (`GetOrAdd`/`OrNull`/`PathFull`/`SetLayersRecursively`/`IsInLayerMask`), Component (`GetOrAdd`), LayerMask, Color, String (null-checks/`Slice`/TMP `Rich*`), Collections (`Shuffle`/`Random`/`Swap`), Number (`Approx`/`AtLeast`/`AtMost`/`Remap`), Rigidbody + Rigidbody2D (`ChangeDirection`/`Stop`), CanvasGroup (`Show`/`Hide`). Async extensions deliberately absent — use UniTask (`.ToUniTask()`, `UniTask.WaitUntil`, `OnInvokeAsync`, `.Forget()`).
 
 ## Roadmap (candidates)
 
-- **Extensions** — Transform/Vector/Color/GameObject/List/Number/String/... extension methods (from the existing `TeekayUtils` sets in my projects).
 - **Algorithm** — pure-C# `GraphSearch` (BFS/DFS/Reachable/ShortestPath), possibly as a separate `noEngineReferences` assembly.
 - **DebugDraw** — Gizmos/GL debug drawers.
 - **From Unity-Utils, if ever needed** — static helpers, editor hotkeys, timers.
