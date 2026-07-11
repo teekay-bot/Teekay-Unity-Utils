@@ -1,51 +1,73 @@
 # Teekay Unity Utils
 
-Personal Unity utilities package — extension methods, helpers, and editor tooling. Inspired by [adammyhre/Unity-Utils](https://github.com/adammyhre/Unity-Utils), but trimmed to what I actually use.
+Personal Unity utilities package: runtime extension methods, singletons, debug drawing, and editor tooling. Curated — only things actually used in production make it in.
 
-**Requires Unity 6.3 LTS (`6000.3`) or newer.**
+**Requires Unity 6000.3 (Unity 6.3 LTS) or newer.**
 
-## Install
+## Installation
 
-### Use in a project (git URL, read-only)
-
-Add to `Packages/manifest.json`:
+Add to your project's `Packages/manifest.json`:
 
 ```json
 "com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git"
 ```
 
-Pin a version once tags exist: append `#v0.1.0`. Update via Package Manager ▸ Update, or bump the tag.
+Pin a release by appending a tag: `...Teekay-Unity-Utils.git#v0.2.0`.
 
-> Private repo: install works on machines where git is already authenticated to GitHub (Unity shells out to system git).
+> Private repo: installation works on machines where git is already authenticated to GitHub (Unity shells out to system git).
 
-### Develop the package (DevProject~)
+## What's inside
 
-Git-URL packages are immutable inside the consuming project — all package development happens in the embedded host project instead:
+| Module | Location | Highlights |
+|---|---|---|
+| **Extensions** | `Runtime/Extensions/` | `Vector2/3.With/Add/DirectionTo/InRangeOf/RandomPointInAnnulus/Quantize`, `Vector2.Rotate`, `Transform.Children/Reset/ForEveryChild`, `GameObject.GetOrAdd/OrNull/PathFull/IsInLayerMask`, `Color.SetAlpha/ToHex`, TMP rich-text `string.Rich*`, `IList.Shuffle/Swap/Random`, `float.Remap/AtLeast/AtMost`, `Rigidbody(2D).ChangeDirection/Stop`, `CanvasGroup.Show/Hide` |
+| **Singleton** | `Runtime/Singleton/` | `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). First-Awake-wins, duplicates self-destroy with a warning, quit-safe, no auto-create in Edit mode |
+| **DebugDraw** | `Runtime/DebugDraw/` | Backend-agnostic `IDebugDrawer`: `GizmosDebugDrawer` (Scene view) and zero-alloc `GLDebugDrawer` (Game view + builds) |
+| **Editor** | `Editor/` | `PingAndSelect`, `EditorFileUtils.ConfirmOverwrite/BrowseForFolder` |
 
-1. Open `DevProject~/` in Unity 6000.3.19f1 (add it to Unity Hub once). It references this package via `file:../..`, so the package is **mutable** there: edit under `Packages/Teekay Unity Utils`, and Unity writes `.meta` files back into this repo — commit them.
-2. Run tests via **Window ▸ General ▸ Test Runner** (EditMode + PlayMode tabs). Package tests are visible because `DevProject~/Packages/manifest.json` lists the package in `"testables"` — any other host project needs that same entry to see them.
-3. Commit + push here, tag `vX.Y.Z`, then update consumers.
+No async helpers by design — [UniTask](https://github.com/Cysharp/UniTask) already covers that space (`.ToUniTask()`, `UniTask.WaitUntil`, `UnityEvent.OnInvokeAsync`, `.Forget()`).
 
-`DevProject~` is invisible to consumers: Unity never imports folders ending in `~` when the package is installed.
+## Quick examples
 
-## Layout & conventions
+```csharp
+using TeekayUtils;
 
-- `Runtime/` — assembly `TeekayUtils`, namespace `TeekayUtils.*`. All runtime code goes here, grouped by folder (`Extensions/`, `Singleton/`, ...).
-- `Editor/` — assembly `TeekayUtils.Editor` (Editor-only, references `TeekayUtils`). Property drawers, editor windows, hotkeys.
-- `Tests/Editor` + `Tests/Runtime` — test assemblies (`TeekayUtils.Tests.Editor` / `TeekayUtils.Tests`), namespace `TeekayUtils.Tests`. Stripped from builds via `UNITY_INCLUDE_TESTS`.
-- `DevProject~/` — dev/test host project, not part of the package payload.
-- Every new file needs its committed `.meta` (edit via the `file:` workflow above so Unity generates them, or hand-author).
-- Version bump + `CHANGELOG.md` entry + git tag `vX.Y.Z` per release.
+// Extensions
+transform.position = transform.position.With(y: 0);
+var target = enemies.Random();
+if (transform.InRangeOf(target.transform, maxDistance: 10f, maxAngle: 90f)) { ... }
+gameObject.GetOrAdd<Rigidbody>().ChangeDirection(Vector3.forward);
 
-## Ported so far
+// Singleton
+public class GameManager : PersistentSingleton<GameManager> { }
+GameManager.Instance.DoThing();          // auto-creates if missing (Play mode)
+GameManager.TryGetInstance()?.DoThing(); // never creates
 
-- **EditorExtensions** (`Editor/Extensions/`) — `PingAndSelect` extension for `Object` (from Unity-Utils, MIT).
-- **EditorFileUtils** (`Editor/Utils/`) — `ConfirmOverwrite`, `BrowseForFolder` static file-dialog helpers (from Unity-Utils, MIT; converted from string extensions).
-- **Singleton** (`Runtime/Singleton/`) — `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). Both: first-Awake-wins, duplicates self-destroy with a warning, quit-safe (no ghost objects), no auto-create in Edit mode. (From Unity-Utils, MIT; hardened.)
-- **Extensions** (`Runtime/Extensions/`) — curated runtime extensions (from Unity-Utils, MIT; trimmed, bug-fixed, extended): Vector2/3 (`With`/`Add`/`InRangeOf`/`DirectionTo`/`Rotate`/annulus/`Quantize`), Transform (`Children`/`Reset`/`ForEveryChild`/destroy-enable-disable children), GameObject (`GetOrAdd`/`OrNull`/`PathFull`/`SetLayersRecursively`/`IsInLayerMask`), Component (`GetOrAdd`), LayerMask, Color, String (null-checks/`Slice`/TMP `Rich*`), Collections (`Shuffle`/`Random`/`Swap`), Number (`Approx`/`AtLeast`/`AtMost`/`Remap`), Rigidbody + Rigidbody2D (`ChangeDirection`/`Stop`), CanvasGroup (`Show`/`Hide`). Async extensions deliberately absent — use UniTask (`.ToUniTask()`, `UniTask.WaitUntil`, `OnInvokeAsync`, `.Forget()`).
+// DebugDraw (inside OnDrawGizmos)
+drawer.WireSphere(transform.position, aggroRadius, Color.red);
+```
 
-## Roadmap (candidates)
+## Development
 
-- **Algorithm** — pure-C# `GraphSearch` (BFS/DFS/Reachable/ShortestPath), possibly as a separate `noEngineReferences` assembly.
-- **DebugDraw** — Gizmos/GL debug drawers.
-- **From Unity-Utils, if ever needed** — static helpers, editor hotkeys, timers.
+Git-URL packages are immutable in consuming projects, so all development happens in the embedded host project:
+
+1. Open `DevProject~/` in Unity 6000.3.19f1. It references this package via `file:../..`, making it editable under `Packages/Teekay Unity Utils`.
+2. Run tests via **Window ▸ General ▸ Test Runner** (EditMode + PlayMode). The package is listed in the host's `"testables"`.
+3. Enter Play mode in the `Sample` scene for interactive demo panels covering singletons, extensions, and debug drawing.
+
+Conventions:
+
+- `Runtime/` → assembly `TeekayUtils`, namespace `TeekayUtils`. `Editor/` → `TeekayUtils.Editor`. Tests are stripped from builds via `UNITY_INCLUDE_TESTS`.
+- Every asset needs its committed `.meta` (files must end with a trailing newline or Unity silently ignores the asset).
+- `DevProject~/` is invisible to consumers — Unity skips `~`-suffixed folders in installed packages.
+
+## Releasing
+
+1. Bump `version` in `package.json`.
+2. Move the `[Unreleased]` section in `CHANGELOG.md` to the new version.
+3. Commit, tag `vX.Y.Z`, push with tags. Consumers update by bumping the tag in their manifest.
+
+## Credits
+
+- Portions adapted from [adammyhre/Unity-Utils](https://github.com/adammyhre/Unity-Utils) (MIT), with fixes and trimming documented in the changelog.
+- DebugDraw originated in Teekay-Core-Unity.
