@@ -41,11 +41,11 @@ Git-URL packages are immutable inside the consuming project — all package deve
 
 - **EditorExtensions** (`Editor/Extensions/`) — `PingAndSelect` extension for `Object` (from Unity-Utils, MIT).
 - **EditorFileUtils** (`Editor/Utils/`) — `ConfirmOverwrite`, `BrowseForFolder` static file-dialog helpers (from Unity-Utils, MIT; converted from string extensions).
+- **Singleton** (`Runtime/Singleton/`) — `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). Both: first-Awake-wins, duplicates self-destroy with a warning, quit-safe (no ghost objects), no auto-create in Edit mode. (From Unity-Utils, MIT; hardened.)
 
 ## Roadmap (candidates)
 
 - **Extensions** — Transform/Vector/Color/GameObject/List/Number/String/... extension methods (from the existing `TeekayUtils` sets in my projects).
-- **Singleton** — `Singleton<T>` / `PersistentSingleton<T>` base classes.
 - **Algorithm** — pure-C# `GraphSearch` (BFS/DFS/Reachable/ShortestPath), possibly as a separate `noEngineReferences` assembly.
 - **DebugDraw** — Gizmos/GL debug drawers.
 - **From Unity-Utils, if ever needed** — static helpers, editor hotkeys, timers.
