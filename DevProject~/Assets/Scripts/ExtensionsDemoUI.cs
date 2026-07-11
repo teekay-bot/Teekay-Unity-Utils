@@ -2,20 +2,12 @@ using System.Collections.Generic;
 using System.Linq;
 using TeekayUtils;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-/// Self-spawning demo panel (right side) exercising the runtime extensions
-/// visually. Sample scene only — never touches PlayMode test runs.
+/// Demo panel exercising the runtime extensions visually. Spawned by
+/// DemoBootstrap in the ExtensionsDemo scene (never during PlayMode test runs).
 public class ExtensionsDemoUI : MonoBehaviour
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (SceneManager.GetActiveScene().name != "Sample") return;
-        new GameObject("Extensions Demo UI").AddComponent<ExtensionsDemoUI>();
-    }
-
     readonly List<Color> palette = new()
     {
         Color.red, Color.yellow, Color.green, Color.cyan, Color.blue, Color.magenta

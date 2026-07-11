@@ -1,17 +1,10 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// Spawns itself when entering Play mode in the Sample scene (and only there,
-/// so PlayMode test runs are untouched). Drives the singleton demos via IMGUI.
+/// Drives the singleton demos via IMGUI. Spawned by DemoBootstrap in the
+/// SingletonDemo scene (never during PlayMode test runs).
 public class SingletonDemoUI : MonoBehaviour
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (SceneManager.GetActiveScene().name != "Sample") return;
-        new GameObject("Singleton Demo UI").AddComponent<SingletonDemoUI>();
-    }
-
     void Awake()
     {
         // Survive the reload-scene demo; RuntimeInitializeOnLoadMethod only fires once per play session.

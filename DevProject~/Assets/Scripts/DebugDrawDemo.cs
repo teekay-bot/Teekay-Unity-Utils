@@ -1,22 +1,13 @@
 using TeekayUtils;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-/// Demos both IDebugDrawer backends in the Sample scene:
+/// Demos both IDebugDrawer backends (spawned by DemoBootstrap in the
+/// DebugDrawDemo scene):
 ///  - GizmosDebugDrawer via OnDrawGizmos (Scene view; Game view needs the Gizmos toggle)
 ///  - GLDebugDrawer via OnPostRender on the main camera (Game view, works in builds).
 /// Shows the manual GL wiring pattern the package expects from consumers.
 public class DebugDrawDemo : MonoBehaviour
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (SceneManager.GetActiveScene().name != "Sample") return;
-        new GameObject("DebugDraw Demo (Gizmos)").AddComponent<DebugDrawDemo>();
-        if (Camera.main != null)
-            Camera.main.gameObject.AddComponent<GLDebugDrawCameraDemo>();
-    }
-
     readonly GizmosDebugDrawer gizmos = new();
 
     void OnDrawGizmos()
