@@ -2,7 +2,8 @@
     "name": "TeekayUtils.Editor",
     "rootNamespace": "TeekayUtils.Editor",
     "references": [
-        "TeekayUtils"
+        "TeekayUtils",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

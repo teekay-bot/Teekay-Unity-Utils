@@ -1,7 +1,11 @@
 {
     "name": "TeekayUtils",
     "rootNamespace": "TeekayUtils",
-    "references": [],
+    "references": [
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
