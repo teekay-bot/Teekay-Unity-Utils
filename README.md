@@ -12,8 +12,6 @@ Add to your project's `Packages/manifest.json`:
 "com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git"
 ```
 
-Pin a release by appending a tag: `...Teekay-Unity-Utils.git#v0.2.0`.
-
 > Private repo: installation works on machines where git is already authenticated to GitHub (Unity shells out to system git).
 
 ## What's inside
@@ -24,8 +22,6 @@ Pin a release by appending a tag: `...Teekay-Unity-Utils.git#v0.2.0`.
 | **Singleton** | `Runtime/Singleton/` | `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). First-Awake-wins, duplicates self-destroy with a warning, quit-safe, no auto-create in Edit mode |
 | **DebugDraw** | `Runtime/DebugDraw/` | Backend-agnostic `IDebugDrawer`: `GizmosDebugDrawer` (Scene view) and zero-alloc `GLDebugDrawer` (Game view + builds) |
 | **Editor** | `Editor/` | `PingAndSelect`, `EditorFileUtils.ConfirmOverwrite/BrowseForFolder` |
-
-No async helpers by design — [UniTask](https://github.com/Cysharp/UniTask) already covers that space (`.ToUniTask()`, `UniTask.WaitUntil`, `UnityEvent.OnInvokeAsync`, `.Forget()`).
 
 ## Quick examples
 
@@ -66,8 +62,3 @@ Conventions:
 1. Bump `version` in `package.json`.
 2. Move the `[Unreleased]` section in `CHANGELOG.md` to the new version.
 3. Commit, tag `vX.Y.Z`, push with tags. Consumers update by bumping the tag in their manifest.
-
-## Credits
-
-- Portions adapted from [adammyhre/Unity-Utils](https://github.com/adammyhre/Unity-Utils) (MIT), with fixes and trimming documented in the changelog.
-- DebugDraw originated in Teekay-Core-Unity.
