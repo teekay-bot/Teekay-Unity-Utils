@@ -21,7 +21,10 @@ Add to your project's `Packages/manifest.json`:
 | **Extensions** | `Runtime/Extensions/` | `Vector2/3.With/Add/DirectionTo/InRangeOf/RandomPointInAnnulus/Quantize`, `Vector2.Rotate`, `Transform.Children/Reset/ForEveryChild`, `GameObject.GetOrAdd/OrNull/PathFull/IsInLayerMask`, `Color.SetAlpha/ToHex`, TMP rich-text `string.Rich*`, `IList.Shuffle/Swap/Random`, `float.Remap/AtLeast/AtMost`, `Rigidbody(2D).ChangeDirection/Stop`, `CanvasGroup.Show/Hide` |
 | **Singleton** | `Runtime/Singleton/` | `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (DontDestroyOnLoad). First-Awake-wins, duplicates self-destroy with a warning, quit-safe, no auto-create in Edit mode |
 | **DebugDraw** | `Runtime/DebugDraw/` | Backend-agnostic `IDebugDrawer`: `GizmosDebugDrawer` (Scene view) and zero-alloc `GLDebugDrawer` (Game view + builds) |
-| **Editor** | `Editor/` | `PingAndSelect`, `EditorFileUtils.ConfirmOverwrite/BrowseForFolder` |
+| **DevConsole** | `Runtime/DevConsole/` | In-game developer console: commands, typed CVars (play-session-only edits via snapshot/restore), autocomplete, history, key bindings, log categories + Unity log capture. Code-built uGUI window (F12), config via ScriptableObject + `Tools ▸ DevConsole ▸ Config` editor window. Gated by `ConsoleAccess` (default: dev builds only) |
+| **Editor** | `Editor/` | `PingAndSelect`, `EditorFileUtils.ConfirmOverwrite/BrowseForFolder`, `[KeyPicker]` drawer |
+
+Package dependencies: `com.unity.inputsystem`, `com.unity.ugui`. The DevConsole UI uses TextMeshPro — the consuming project must have **TMP Essential Resources** imported (`Window ▸ TextMeshPro ▸ Import TMP Essential Resources`); without them the console still registers commands/CVars but cannot open its window.
 
 ## Quick examples
 
@@ -49,7 +52,7 @@ Git-URL packages are immutable in consuming projects, so all development happens
 
 1. Open `DevProject~/` in Unity 6000.3.19f1. It references this package via `file:../..`, making it editable under `Packages/Teekay Unity Utils`.
 2. Run tests via **Window ▸ General ▸ Test Runner** (EditMode + PlayMode). The package is listed in the host's `"testables"`.
-3. Enter Play mode in the `Sample` scene for interactive demo panels covering singletons, extensions, and debug drawing.
+3. Open the `DemoHub` scene and enter Play mode — a navigator bar switches between per-feature demo scenes (`SingletonDemo`, `ExtensionsDemo`, `DebugDrawDemo`, `DevConsoleDemo`).
 
 Conventions:
 
