@@ -54,6 +54,10 @@ Quick compile check without Unity (while the editor is open): build the `.cs` fi
 - Manual usage verification via per-feature demo scenes in `DevProject/Assets/Scenes/` (`DemoHub` + `SingletonDemo`/`ExtensionsDemo`/`DebugDrawDemo`/`DevConsoleDemo`/`EventBusDemo`). `DemoBootstrap` spawns demos via `SceneManager.sceneLoaded` (NOT per-demo `[RuntimeInitializeOnLoadMethod]` — fires once per play session, breaks scene switches); `DemoNavigator` is the persistent scene-switch bar. New demo = copy a scene file + fresh meta GUID + EditorBuildSettings entry + a case in `DemoBootstrap` + the navigator list. Demo code lives ONLY in DevProject.
 - The user's workflow per feature: review/plan → agree on scope → port with tests → compile-check → user runs tests in Unity → scene demo → user verifies by hand → commit (package and DevProject changes as separate commits).
 
+## Branch workflow
+
+Day-to-day work happens on **`dev`** (commit + push there). `main` only receives merges from `dev` — prefer fast-forward; merge when a batch of work is verified or when releasing. Tags (`vX.Y.Z`) are created on `main` after the release merge. Never commit directly to `main`.
+
 ## Commit style
 
 No Co-Authored-By trailers (disabled globally via `attribution` settings; history was rewritten once to strip them — don't reintroduce). Subject in imperative mood; body explains what changed vs upstream where relevant.
