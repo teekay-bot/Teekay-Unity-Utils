@@ -59,9 +59,3 @@ Conventions:
 - `Runtime/` → assembly `TeekayUtils`, namespace `TeekayUtils`. `Editor/` → `TeekayUtils.Editor`. Tests are stripped from builds via `UNITY_INCLUDE_TESTS`.
 - Every asset needs its committed `.meta` (files must end with a trailing newline or Unity silently ignores the asset).
 - `DevProject~/` is invisible to consumers — Unity skips `~`-suffixed folders in installed packages.
-
-## Releasing
-
-1. Bump `version` in `package.json`.
-2. Move the `[Unreleased]` section in `CHANGELOG.md` to the new version.
-3. Commit, tag `vX.Y.Z`, push with tags. Consumers update by bumping the tag in their manifest.
