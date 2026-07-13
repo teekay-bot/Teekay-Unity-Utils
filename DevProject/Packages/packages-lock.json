@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.teekay.unity-utils": {
-      "version": "file:../..",
+      "version": "file:../../com.teekay.unity-utils",
       "depth": 0,
       "source": "local",
       "dependencies": {
