@@ -22,7 +22,8 @@ Drop the `#v1.0.0` suffix to track the latest. The `.git` extension and `?path=`
 
 ## Features
 
-- **Extensions** — ~70 quality-of-life methods for `Vector2/3`, `Transform`, `GameObject`, `Color`, `LayerMask`, collections, numbers, `Rigidbody(2D)`, `CanvasGroup`, and TMP rich-text strings.
+- **Extensions** — ~70 quality-of-life methods for `Vector2/3`, `Transform`, `GameObject`, `Color`, `LayerMask`, collections, numbers, `Rigidbody(2D)`, `CanvasGroup`, and TMP rich-text strings. Includes `IsUnityNull()` for destroyed-object checks through interface references.
+- **Physics helpers** — `ColliderComponentCache<T>`: cached `GetComponentInParent` lookups keyed by Collider for overlap/raycast hot paths.
 - **Singletons** — `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (survives scene loads). First-Awake-wins, duplicates self-destroy, safe on application quit.
 - **EventBus** — type-keyed publish/subscribe for gameplay intents. Struct events, zero-alloc publish, one throwing listener never stops the rest.
 - **DebugDraw** — one drawing API, two backends: Gizmos (Scene view) and GL lines (Game view + builds).

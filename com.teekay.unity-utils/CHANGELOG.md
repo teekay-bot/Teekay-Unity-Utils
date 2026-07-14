@@ -4,6 +4,13 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-07-14
+
+### Added
+
+- `Runtime/Extensions/UnityObjectExtensions.cs` — `IsUnityNull(this object)`: liveness check for references that reach a UnityEngine.Object through a non-Object static type (interfaces, `object`), where Unity's overloaded null check can't kick in. Complements `OrNull`, whose `where T : Object` constraint rejects interface types. Promoted from Teekay-Unity-Base's FPP interaction system. 4 EditMode tests.
+- `Runtime/Physics/ColliderComponentCache.cs` — `ColliderComponentCache<T>`: Dictionary-backed cache for `GetComponentInParent<T>()` keyed by Collider, for physics-scan hot paths (interaction targeting, AI perception). Caches misses too, re-resolves destroyed components transparently, blunt-wipe eviction past a configurable cap; owner clears on scene unload. Promoted from Teekay-Unity-Base. 6 EditMode tests.
+
 ## [1.0.0] - 2026-07-13
 
 ### Added
