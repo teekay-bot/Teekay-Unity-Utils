@@ -7,11 +7,16 @@ namespace TeekayUtils
     /// material.SetPass(0); GL.Begin(GL.LINES); … GL.End(); so the lines batch into one draw call.
     /// Works in both editor and standalone builds — used to surface debug visuals on the player camera
     /// in Game view (where Gizmos don't render unless the Gizmos toggle is on).
+    /// <para>
+    /// Prefer <see cref="GLDebugDrawRenderer"/> over wiring this up by hand: the camera hook differs
+    /// between the Built-in pipeline (<c>OnPostRender</c>) and SRP (<c>RenderPipelineManager</c>), and
+    /// using the wrong one draws nothing at all without raising an error.
+    /// </para>
     /// <para>Holds only a small scratch buffer for cube corners; reuse a single instance per consumer.</para>
     /// </summary>
     public sealed class GLDebugDrawer : IDebugDrawer
     {
-        const int DiscSegments = 24;
+        const int CircleSegments = 24;
 
         // Reused across WireCube calls to avoid per-frame allocations in the GL hot path.
         readonly Vector3[] _cubeCorners = new Vector3[8];
@@ -39,6 +44,22 @@ namespace TeekayUtils
                 fromPolarDegrees * Mathf.Deg2Rad, toPolarDegrees * Mathf.Deg2Rad, rings, slices);
         }
 
+        public void WireCapsule(Vector3 start, Vector3 end, float radius, Color color)
+            => WireCapsule(start, end, radius, color, DebugDrawShapes.DefaultSphereRings, DebugDrawShapes.DefaultSphereSlices);
+
+        public void WireCapsule(Vector3 start, Vector3 end, float radius, Color color, int rings, int slices)
+            => DebugDrawShapes.WireCapsule(this, start, end, radius, color, rings, slices);
+
+        public void ViewCone(Vector3 apex, Vector3 direction, float fullAngleDegrees, float range, Color color)
+            => ViewCone(apex, direction, fullAngleDegrees, range, color, DebugDrawShapes.DefaultSphereRings, DebugDrawShapes.DefaultSphereSlices);
+
+        public void ViewCone(Vector3 apex, Vector3 direction, float fullAngleDegrees, float range, Color color,
+                             int rings, int slices)
+            => DebugDrawShapes.ViewCone(this, apex, direction, fullAngleDegrees, range, color, rings, slices);
+
+        public void Arrow(Vector3 from, Vector3 direction, Color color)
+            => DebugDrawShapes.Arrow(this, from, direction, color);
+
         public void Line(Vector3 from, Vector3 to, Color color)
         {
             GL.Color(color);
@@ -53,10 +74,10 @@ namespace TeekayUtils
             GL.Vertex(from + direction);
         }
 
-        public void Disc(Vector3 center, Vector3 normal, float radius, Color color)
+        public void Circle(Vector3 center, Vector3 normal, float radius, Color color)
         {
             DebugDrawGeometry.GetCircleBasis(normal, out Vector3 tangent, out Vector3 bitangent);
-            DebugDrawShapes.Arc(this, center, tangent, bitangent, radius, 0f, Mathf.PI * 2f, DiscSegments, color);
+            DebugDrawShapes.Arc(this, center, tangent, bitangent, radius, 0f, Mathf.PI * 2f, CircleSegments, color);
         }
 
         public void WireCube(Vector3 center, Vector3 size, Color color)
