@@ -9,16 +9,16 @@ Curated Unity utilities: extension methods, singletons, an event bus, debug draw
 **Package Manager UI** — `Window ▸ Package Manager ▸ + ▸ Install package from git URL…` and paste:
 
 ```
-https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v1.0.0
+https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.0.0
 ```
 
 **Or edit `Packages/manifest.json`** directly:
 
 ```json
-"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v1.0.0"
+"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.0.0"
 ```
 
-Drop the `#v1.0.0` suffix to track the latest. The `.git` extension and `?path=` are both required — without `.git` the Package Manager treats the URL as a package name.
+Drop the `#v2.0.0` suffix to track the latest. The `.git` extension and `?path=` are both required — without `.git` the Package Manager treats the URL as a package name.
 
 ## Features
 
@@ -26,7 +26,7 @@ Drop the `#v1.0.0` suffix to track the latest. The `.git` extension and `?path=`
 - **Physics helpers** — `ColliderComponentCache<T>`: cached `GetComponentInParent` lookups keyed by Collider for overlap/raycast hot paths.
 - **Singletons** — `Singleton<T>` (scene-local) and `PersistentSingleton<T>` (survives scene loads). First-Awake-wins, duplicates self-destroy, safe on application quit.
 - **EventBus** — type-keyed publish/subscribe for gameplay intents. Struct events, zero-alloc publish, one throwing listener never stops the rest.
-- **DebugDraw** — one drawing API, two backends: Gizmos (Scene view) and GL lines (Game view + builds).
+- **DebugDraw** — one drawing API, two backends: Gizmos (Scene view) and GL lines (Game view + builds, Built-in pipeline and URP/HDRP alike). Spheres, latitude bands/domes, capsules, perception cones, circles, cubes, rays and arrows — all tessellated once and shared, so both backends draw identically.
 - **DevConsole** — drop-in developer console (F12): commands, typed CVars with play-session-only edits, autocomplete, history, key bindings, Unity log capture. Disabled in release builds by default.
 
 ## Quick start

@@ -4,18 +4,30 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-07-19
+
+A DebugDraw release. Debug spheres now read as volumes instead of flat rings, the module
+gained the shapes gameplay code actually needs (capsules, perception cones, arrows), and
+GL drawing no longer silently fails under URP/HDRP.
+
+### Fixed
+
+- **`GLDebugDrawer` drew nothing at all under URP or HDRP.** Its documented usage pattern relied on `OnPostRender`, which only the Built-in render pipeline calls — under a scriptable pipeline the hook simply never fires, with no error and no warning. Added `GLDebugDrawRenderer`, a camera component that owns the line material and subscribes to whichever hook the active pipeline uses (`OnPostRender` for Built-in, `RenderPipelineManager.endCameraRendering` for SRP). `RenderPipelineManager` lives in `UnityEngine.CoreModule`, so supporting SRP adds **no** package dependency on URP or HDRP. Consumers should prefer this component over wiring GL up by hand.
 
 ### Changed
 
-- **BREAKING for anyone implementing `IDebugDrawer`** (both in-package implementations are updated; call sites are unaffected). Two methods added to the interface: `WireSphere(center, radius, color, rings, slices)` and `WireSphereBand(center, up, radius, color, fromPolarDegrees, toPolarDegrees, rings, slices)`.
+- **BREAKING — `IDebugDrawer.Disc` is now `Circle`.** It always drew an outline, never a filled disc; the name was actively misleading. Rename call sites; the behaviour is unchanged.
+- **BREAKING for anyone implementing `IDebugDrawer`** (both in-package implementations are updated). Added to the interface: two `WireSphere` overloads, `WireSphereBand`, two `WireCapsule` overloads, two `ViewCone` overloads, and `Arrow`.
 - `IDebugDrawer.WireSphere` now draws a latitude/longitude grid instead of three great circles, so a debug sphere reads as a volume rather than a flat ring. `GizmosDebugDrawer` no longer calls `Gizmos.DrawWireSphere` — it loses Unity's camera-facing silhouette circle but gains the grid, and now matches `GLDebugDrawer` exactly. Default density is 6 rings × 16 slices (176 segments per sphere); pass explicit `rings`/`slices` where a call site draws many spheres. Degenerate input is handled: the pole rings are skipped rather than drawn as zero-length segments, `rings`/`slices` are clamped, and a non-positive radius draws nothing instead of emitting every meridian as a pile of zero-length segments at the centre.
 
 ### Added
 
 - `IDebugDrawer.WireSphereBand` — a latitude band of a wire sphere, for domes and other partial ranges (e.g. `(0, 90)` around an arbitrary `up` axis for an upward hearing/vision volume). Polar angles are degrees from `up`: 0 = pole along up, 90 = equator, 180 = opposite pole.
 - `DebugDrawGeometry.GetLatitudeRing` — centre and radius of a latitude ring on a sphere; degenerate (zero-radius) at the poles so callers can skip it. 5 new EditMode tests, including one asserting the latitude and meridian parameterizations agree so grid lines actually intersect.
-- `Runtime/DebugDraw/DebugDrawShapes.cs` (internal, visible to the test assembly) — shared arc/sphere tessellation expressed in terms of `IDebugDrawer.Line`, so every backend draws these shapes identically by construction. Replaces the `DrawCircle` loop that was duplicated in both drawers. 5 EditMode tests covering surface accuracy, pole handling, dome extent and degenerate input.
+- `IDebugDrawer.WireCapsule` — wire capsule between two sphere centres, matching `Physics.CheckCapsule`'s convention (**not** `CapsuleCollider.height`, which includes both caps). Both caps are banded around the same axis so their meridians line up instead of being rotated apart.
+- `IDebugDrawer.ViewCone` — the volume a range-and-angle perception check actually covers, for vision cones and directional hearing. The angle is the FULL cone angle, matching how a view angle is normally configured and then tested as `Vector3.Angle(...) <= viewAngle / 2`. The far end is a spherical cap, not a flat disc, because that is the shape a distance check produces — a disc would overstate the range everywhere except dead centre.
+- `IDebugDrawer.Arrow` — `Ray` with a head at the far end, scaled to the length, so direction is readable.
+- `Runtime/DebugDraw/DebugDrawShapes.cs` (internal, visible to the test assembly) — shared tessellation for arcs, spheres, capsules, cones and arrows, expressed in terms of `IDebugDrawer.Line`, so every backend draws these shapes identically by construction. Replaces the `DrawCircle` loop that was duplicated in both drawers. 11 EditMode tests covering surface accuracy, cap alignment, cone extent, arrow head orientation and degenerate input.
 
 ## [1.1.0] - 2026-07-14
 
