@@ -44,6 +44,80 @@ namespace TeekayUtils.Tests
         }
 
         [Test]
+        public void GetLatitudeRing_AtEquator_ReturnsFullRadiusAtSphereCenter()
+        {
+            var center = new Vector3(1, 2, 3);
+            DebugDrawGeometry.GetLatitudeRing(center, Vector3.up, 2.5f, Mathf.PI * 0.5f,
+                out Vector3 ringCenter, out float ringRadius);
+
+            Assert.That(Vector3.Distance(ringCenter, center), Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(ringRadius, Is.EqualTo(2.5f).Within(1e-4f));
+        }
+
+        [Test]
+        public void GetLatitudeRing_AtPole_ReturnsZeroRadiusAtPoleOffset()
+        {
+            var center = new Vector3(1, 2, 3);
+            DebugDrawGeometry.GetLatitudeRing(center, Vector3.up, 2.5f, 0f,
+                out Vector3 ringCenter, out float ringRadius);
+
+            Assert.That(Vector3.Distance(ringCenter, center + Vector3.up * 2.5f), Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(ringRadius, Is.EqualTo(0f).Within(1e-4f));
+        }
+
+        [Test]
+        public void GetLatitudeRing_TiltedUnnormalizedAxis_OffsetsAlongAxis()
+        {
+            var center = new Vector3(1, 2, 3);
+            var axis = new Vector3(0, 3, 3); // deliberately not unit length
+            DebugDrawGeometry.GetLatitudeRing(center, axis, 2f, 0f, out Vector3 ringCenter, out _);
+
+            Assert.That(Vector3.Distance(ringCenter, center + axis.normalized * 2f), Is.EqualTo(0f).Within(1e-4f));
+        }
+
+        [Test]
+        public void MeridianPoints_LieOnSphereSurface()
+        {
+            var center = new Vector3(1, 2, 3);
+            var axis = new Vector3(1, 1, 0).normalized;
+            DebugDrawGeometry.GetCircleBasis(axis, out Vector3 t, out Vector3 b);
+
+            // A meridian is an arc on the circle spanned by (axis, radial), swept over the polar angle.
+            Vector3 radial = t * Mathf.Cos(1.1f) + b * Mathf.Sin(1.1f);
+            for (int i = 0; i <= 8; i++)
+            {
+                float polar = i / 8f * Mathf.PI;
+                Vector3 p = DebugDrawGeometry.PointOnCircle(center, axis, radial, 2.5f, polar);
+                Assert.That(Vector3.Distance(center, p), Is.EqualTo(2.5f).Within(1e-4f));
+            }
+        }
+
+        [Test]
+        public void LatitudeRingPoints_MatchMeridianPointsAtSameAngles()
+        {
+            var center = new Vector3(1, 2, 3);
+            var axis = new Vector3(1, 1, 0).normalized;
+            const float radius = 2.5f;
+            const float azimuth = 1.1f;
+            DebugDrawGeometry.GetCircleBasis(axis, out Vector3 t, out Vector3 b);
+            Vector3 radial = t * Mathf.Cos(azimuth) + b * Mathf.Sin(azimuth);
+
+            // The two parameterizations must agree, otherwise the grid lines would not intersect.
+            for (int i = 1; i < 8; i++)
+            {
+                float polar = i / 8f * Mathf.PI;
+                DebugDrawGeometry.GetLatitudeRing(center, axis, radius, polar,
+                    out Vector3 ringCenter, out float ringRadius);
+
+                Vector3 onRing = DebugDrawGeometry.PointOnCircle(ringCenter, t, b, ringRadius, azimuth);
+                Vector3 onMeridian = DebugDrawGeometry.PointOnCircle(center, axis, radial, radius, polar);
+
+                Assert.That(Vector3.Distance(onRing, onMeridian), Is.EqualTo(0f).Within(1e-4f));
+                Assert.That(Vector3.Distance(center, onRing), Is.EqualTo(radius).Within(1e-4f));
+            }
+        }
+
+        [Test]
         public void GetCubeCorners_ProducesHalfExtentOffsets()
         {
             var corners = new Vector3[8];

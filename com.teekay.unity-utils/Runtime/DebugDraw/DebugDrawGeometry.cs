@@ -43,6 +43,20 @@ namespace TeekayUtils
             => center + (tangent * Mathf.Cos(angleRadians) + bitangent * Mathf.Sin(angleRadians)) * radius;
 
         /// <summary>
+        /// Centre and radius of the latitude ring at <paramref name="polarRadians"/> on the sphere given by
+        /// <paramref name="center"/> and <paramref name="radius"/>. The polar angle is measured from
+        /// <paramref name="axis"/>: 0 = the pole along the axis, π/2 = the equator, π = the opposite pole.
+        /// <paramref name="axis"/> is normalized internally.
+        /// <para>At either pole <paramref name="ringRadius"/> is 0 — callers should skip the degenerate ring.</para>
+        /// </summary>
+        public static void GetLatitudeRing(Vector3 center, Vector3 axis, float radius, float polarRadians,
+                                           out Vector3 ringCenter, out float ringRadius)
+        {
+            ringCenter = center + axis.normalized * (Mathf.Cos(polarRadians) * radius);
+            ringRadius = Mathf.Sin(polarRadians) * radius;
+        }
+
+        /// <summary>
         /// Fills <paramref name="corners"/> (length ≥ 8) with the cube corners for <paramref name="center"/>
         /// and full-extents <paramref name="size"/>, ordered to match <see cref="CubeEdges"/>.
         /// </summary>

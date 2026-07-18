@@ -11,10 +11,21 @@ namespace TeekayUtils
     {
         const int DiscSegments = 24;
 
+        // Deliberately not Gizmos.DrawWireSphere: that draws three great circles plus a camera-facing
+        // silhouette, which reads as a flat ring rather than a volume. The lat/long grid costs
+        // 176 DrawLine calls at the default density — fine for debug, but pass lower rings/slices
+        // when a call site draws dozens of spheres at once.
         public void WireSphere(Vector3 center, float radius, Color color)
+            => WireSphere(center, radius, color, DebugDrawShapes.DefaultSphereRings, DebugDrawShapes.DefaultSphereSlices);
+
+        public void WireSphere(Vector3 center, float radius, Color color, int rings, int slices)
+            => WireSphereBand(center, Vector3.up, radius, color, 0f, 180f, rings, slices);
+
+        public void WireSphereBand(Vector3 center, Vector3 up, float radius, Color color,
+                                   float fromPolarDegrees, float toPolarDegrees, int rings, int slices)
         {
-            Gizmos.color = color;
-            Gizmos.DrawWireSphere(center, radius);
+            DebugDrawShapes.WireSphereBand(this, center, up, radius, color,
+                fromPolarDegrees * Mathf.Deg2Rad, toPolarDegrees * Mathf.Deg2Rad, rings, slices);
         }
 
         public void Sphere(Vector3 center, float radius, Color color)
@@ -37,17 +48,8 @@ namespace TeekayUtils
 
         public void Disc(Vector3 center, Vector3 normal, float radius, Color color)
         {
-            Gizmos.color = color;
             DebugDrawGeometry.GetCircleBasis(normal, out Vector3 tangent, out Vector3 bitangent);
-
-            Vector3 prev = DebugDrawGeometry.PointOnCircle(center, tangent, bitangent, radius, 0f);
-            for (int i = 1; i <= DiscSegments; i++)
-            {
-                float angle = (float)i / DiscSegments * Mathf.PI * 2f;
-                Vector3 point = DebugDrawGeometry.PointOnCircle(center, tangent, bitangent, radius, angle);
-                Gizmos.DrawLine(prev, point);
-                prev = point;
-            }
+            DebugDrawShapes.Arc(this, center, tangent, bitangent, radius, 0f, Mathf.PI * 2f, DiscSegments, color);
         }
 
         public void WireCube(Vector3 center, Vector3 size, Color color)

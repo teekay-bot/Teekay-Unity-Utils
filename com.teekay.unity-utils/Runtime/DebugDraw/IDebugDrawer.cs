@@ -10,7 +10,21 @@ namespace TeekayUtils
     /// </summary>
     public interface IDebugDrawer
     {
+        /// <summary>Wire sphere as a latitude/longitude grid at the backend's default density.</summary>
         void WireSphere(Vector3 center, float radius, Color color);
+        /// <summary>
+        /// Wire sphere as a latitude/longitude grid. <paramref name="rings"/> is the number of latitude
+        /// bands (and the segment count of each meridian); <paramref name="slices"/> is the number of
+        /// meridians (and the segment count of each latitude ring). Both are clamped to at least 1 and 3.
+        /// </summary>
+        void WireSphere(Vector3 center, float radius, Color color, int rings, int slices);
+        /// <summary>
+        /// A latitude band of a wire sphere, for domes and other partial ranges. Polar angles are measured
+        /// in degrees from <paramref name="up"/>: 0 = the pole along up, 90 = the equator, 180 = the opposite
+        /// pole. So (0, 180) is a full sphere and (0, 90) is an upper dome.
+        /// </summary>
+        void WireSphereBand(Vector3 center, Vector3 up, float radius, Color color,
+                            float fromPolarDegrees, float toPolarDegrees, int rings, int slices);
         void Sphere(Vector3 center, float radius, Color color);
         void Line(Vector3 from, Vector3 to, Color color);
         /// <summary><paramref name="direction"/> is a delta from <paramref name="from"/> (not normalized); the line ends at <c>from + direction</c>.</summary>

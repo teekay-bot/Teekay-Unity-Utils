@@ -11,7 +11,6 @@ namespace TeekayUtils
     /// </summary>
     public sealed class GLDebugDrawer : IDebugDrawer
     {
-        const int WireSphereSegments = 16;
         const int DiscSegments = 24;
 
         // Reused across WireCube calls to avoid per-frame allocations in the GL hot path.
@@ -28,11 +27,16 @@ namespace TeekayUtils
         }
 
         public void WireSphere(Vector3 center, float radius, Color color)
+            => WireSphere(center, radius, color, DebugDrawShapes.DefaultSphereRings, DebugDrawShapes.DefaultSphereSlices);
+
+        public void WireSphere(Vector3 center, float radius, Color color, int rings, int slices)
+            => WireSphereBand(center, Vector3.up, radius, color, 0f, 180f, rings, slices);
+
+        public void WireSphereBand(Vector3 center, Vector3 up, float radius, Color color,
+                                   float fromPolarDegrees, float toPolarDegrees, int rings, int slices)
         {
-            GL.Color(color);
-            DrawCircle(center, Vector3.up, radius, WireSphereSegments);
-            DrawCircle(center, Vector3.right, radius, WireSphereSegments);
-            DrawCircle(center, Vector3.forward, radius, WireSphereSegments);
+            DebugDrawShapes.WireSphereBand(this, center, up, radius, color,
+                fromPolarDegrees * Mathf.Deg2Rad, toPolarDegrees * Mathf.Deg2Rad, rings, slices);
         }
 
         public void Line(Vector3 from, Vector3 to, Color color)
@@ -51,8 +55,8 @@ namespace TeekayUtils
 
         public void Disc(Vector3 center, Vector3 normal, float radius, Color color)
         {
-            GL.Color(color);
-            DrawCircle(center, normal, radius, DiscSegments);
+            DebugDrawGeometry.GetCircleBasis(normal, out Vector3 tangent, out Vector3 bitangent);
+            DebugDrawShapes.Arc(this, center, tangent, bitangent, radius, 0f, Mathf.PI * 2f, DiscSegments, color);
         }
 
         public void WireCube(Vector3 center, Vector3 size, Color color)
@@ -63,21 +67,6 @@ namespace TeekayUtils
             {
                 GL.Vertex(_cubeCorners[from]);
                 GL.Vertex(_cubeCorners[to]);
-            }
-        }
-
-        static void DrawCircle(Vector3 center, Vector3 normal, float radius, int segments)
-        {
-            DebugDrawGeometry.GetCircleBasis(normal, out Vector3 tangent, out Vector3 bitangent);
-
-            Vector3 prev = DebugDrawGeometry.PointOnCircle(center, tangent, bitangent, radius, 0f);
-            for (int i = 1; i <= segments; i++)
-            {
-                float angle = (float)i / segments * Mathf.PI * 2f;
-                Vector3 point = DebugDrawGeometry.PointOnCircle(center, tangent, bitangent, radius, angle);
-                GL.Vertex(prev);
-                GL.Vertex(point);
-                prev = point;
             }
         }
     }

@@ -4,6 +4,19 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING for anyone implementing `IDebugDrawer`** (both in-package implementations are updated; call sites are unaffected). Two methods added to the interface: `WireSphere(center, radius, color, rings, slices)` and `WireSphereBand(center, up, radius, color, fromPolarDegrees, toPolarDegrees, rings, slices)`.
+- `IDebugDrawer.WireSphere` now draws a latitude/longitude grid instead of three great circles, so a debug sphere reads as a volume rather than a flat ring. `GizmosDebugDrawer` no longer calls `Gizmos.DrawWireSphere` — it loses Unity's camera-facing silhouette circle but gains the grid, and now matches `GLDebugDrawer` exactly. Default density is 6 rings × 16 slices (176 segments per sphere); pass explicit `rings`/`slices` where a call site draws many spheres. Degenerate input is handled: the pole rings are skipped rather than drawn as zero-length segments, `rings`/`slices` are clamped, and a non-positive radius draws nothing instead of emitting every meridian as a pile of zero-length segments at the centre.
+
+### Added
+
+- `IDebugDrawer.WireSphereBand` — a latitude band of a wire sphere, for domes and other partial ranges (e.g. `(0, 90)` around an arbitrary `up` axis for an upward hearing/vision volume). Polar angles are degrees from `up`: 0 = pole along up, 90 = equator, 180 = opposite pole.
+- `DebugDrawGeometry.GetLatitudeRing` — centre and radius of a latitude ring on a sphere; degenerate (zero-radius) at the poles so callers can skip it. 5 new EditMode tests, including one asserting the latitude and meridian parameterizations agree so grid lines actually intersect.
+- `Runtime/DebugDraw/DebugDrawShapes.cs` (internal, visible to the test assembly) — shared arc/sphere tessellation expressed in terms of `IDebugDrawer.Line`, so every backend draws these shapes identically by construction. Replaces the `DrawCircle` loop that was duplicated in both drawers. 5 EditMode tests covering surface accuracy, pole handling, dome extent and degenerate input.
+
 ## [1.1.0] - 2026-07-14
 
 ### Added
