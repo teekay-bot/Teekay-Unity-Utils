@@ -107,7 +107,7 @@ public class ExtensionsDemoUI : MonoBehaviour
             else uiPanel.Show();
         }
 
-        if (GUILayout.Button("11. Log misc  (PathFull, IsInLayerMask, IsOdd, Remap, Slice)"))
+        if (GUILayout.Button("11. Log misc  (FullPath, IsInLayerMask, IsOdd, Remap, Slice)"))
             LogMisc();
 
         GUILayout.EndArea();
@@ -164,7 +164,7 @@ public class ExtensionsDemoUI : MonoBehaviour
     {
         if (orbiter != null)
         {
-            Debug.Log($"PathFull: {orbiter.PathFull()}");
+            Debug.Log($"FullPath: {orbiter.FullPath()}");
             orbiter.SetLayersRecursively(5);
             Debug.Log($"IsInLayerMask(1<<5): {orbiter.IsInLayerMask(1 << 5)}");
         }
