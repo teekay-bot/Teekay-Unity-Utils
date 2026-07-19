@@ -58,6 +58,12 @@ Quick compile check without Unity (while the editor is open): build the `.cs` fi
 
 Day-to-day work happens on **`dev`** (commit + push there). `main` only receives merges from `dev` — prefer fast-forward; merge when a batch of work is verified or when releasing. Tags (`vX.Y.Z`) are created on `main` after the release merge. Never commit directly to `main`.
 
+GitHub has a ruleset requiring pull requests into `main`, so pushing the release merge prints
+`Bypassed rule violations for refs/heads/main`. **This is expected, not a mistake.** The repo is
+public and the ruleset is kept deliberately as a guard for any future collaborator; the owner is
+sole maintainer and bypasses it with admin rights when releasing. Don't "fix" the warning by
+removing the ruleset or by switching the release to a PR flow.
+
 ## Commit style
 
 No Co-Authored-By trailers (disabled globally via `attribution` settings; history was rewritten once to strip them — don't reintroduce). Subject in imperative mood; body explains what changed vs upstream where relevant.

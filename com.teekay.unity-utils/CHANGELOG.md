@@ -4,6 +4,29 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-07-19
+
+A DevConsole UX/polish release: the log becomes a real list instead of one giant string,
+common actions get buttons, and the window opens with a fade instead of popping.
+
+### Changed
+
+- **DevConsole log view rewritten as pooled, virtualized rows** (`ConsoleLogView`). Only the visible slice of the buffer has live widgets, manually stacked from measured heights — no layout groups. Unlocks per-line features and replaces the previous "rebuild one giant TMP string on every append" cost model.
+- **Consecutive duplicate log lines collapse** into one row with an accent ×N badge (`ConsoleLogBuffer`, data-level, unit-tested). A per-frame spammer now reads as one line with a counter instead of filling the buffer.
+- **Auto-scroll no longer yanks the view**: the log follows new output only while you're already at the bottom. Scrolled up, new lines increment a floating "N new" pill; clicking it jumps back to the live tail.
+- **One theming surface.** The chrome palette (window/elevated/hover surfaces, text tiers, accent, error accent) moved from a private `Theme` class into `DevConsoleSettings` + `DevConsoleConfig` next to the content colors; hover/selection tints derive from the accent. Suggestion-row rich-text colors now derive from the theme instead of hardcoded hex.
+
+### Added
+
+- **Toolbar** on the title bar: `Clear`, `Copy` (copies the filtered log as plain text), `Filter`.
+- **Filter row** (toolbar-toggled): search box narrowing the log to matching lines, plus one chip per category — chips drive the same enabled flag as `log_filter`, and hide existing lines as well as future ones. Chips wrap onto extra lines and the row grows to fit, so narrowing the window never clips a filter out of reach.
+- **Click a log line to copy it** — the row flashes accent as confirmation. Severity is now also shown as a colored stripe on the row's left edge.
+- **Scrollbar** (thin, auto-hiding) — the log finally advertises that it scrolls.
+- **Open/close animation**: 120 ms fade + slide, unscaled time (the console pauses the game while focused — a scaled tween would freeze mid-open). Input focus is granted immediately; animation never gates typing.
+- **Error feedback**: a failed command (unknown name, bad CVar value, throwing handler) flashes the input card toward the error accent — visible even when the error line scrolls by unnoticed.
+- `DevConsoleSettings.FontAsset` / config `fontAsset` — assign a monospace TMP font so columned output (`help`, `binds`) lines up; the package still ships zero assets.
+- Demo: `demo.spam [count]` exercises duplicate collapsing and the jump pill.
+
 ## [2.0.0] - 2026-07-19
 
 A DebugDraw release. Debug spheres now read as volumes instead of flat rings, the module

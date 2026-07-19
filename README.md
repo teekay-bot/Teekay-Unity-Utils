@@ -9,13 +9,13 @@ Curated Unity utilities: extension methods, singletons, an event bus, debug draw
 **Package Manager UI** — `Window ▸ Package Manager ▸ + ▸ Install package from git URL…` and paste:
 
 ```
-https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.0.0
+https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.1.0
 ```
 
 **Or edit `Packages/manifest.json`** directly:
 
 ```json
-"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.0.0"
+"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.1.0"
 ```
 
 The two forms are not interchangeable — the Package Manager's git URL field takes the bare

@@ -1,6 +1,6 @@
 {
   "name": "com.teekay.unity-utils",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "displayName": "Teekay Unity Utils",
   "description": "Personal collection of Unity utilities: extension methods, helpers, and editor tooling. Inspired by adammyhre/Unity-Utils, trimmed to what I actually use.",
   "unity": "6000.3",
