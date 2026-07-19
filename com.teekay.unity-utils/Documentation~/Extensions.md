@@ -78,8 +78,8 @@ version works in its own 2D plane.
 | `DestroyChildren()` / `DestroyChildrenImmediate()` | As above. |
 | `EnableChildren()` / `DisableChildren()` | As above. |
 | `ResetTransformation()` | Same operation as `Transform.Reset()` — the two names differ for historical reasons. |
-| `Path()` | Path of the **parent**, e.g. `/Root/Enemies`. `/` for a root object. |
-| `PathFull()` | Path **including** this object, e.g. `/Root/Enemies/Goblin`. Allocates; fine for logging, not for hot paths. |
+| `ParentPath()` | Path of the **parent**, e.g. `/Root/Enemies`. `/` for a root object. |
+| `FullPath()` | Path **including** this object, e.g. `/Root/Enemies/Goblin`. Allocates; fine for logging, not for hot paths. |
 | `SetLayersRecursively(int layer)` | Sets the layer on this object and every descendant. |
 | `IsInLayerMask(LayerMask mask)` | Layer-vs-mask test. |
 
@@ -223,5 +223,5 @@ These pairs look symmetric and are not:
 - `Color.Add` / `Color.Subtract` **clamp** to 0–1; `Vector2.Add` / `Vector3.Add` do not.
 - `Vector3.Quantize` **floors**; it never rounds to nearest.
 - `Vector3.ComponentDivide` guards against divide-by-zero; `Quantize` does not.
-- `GameObject.Path()` is the **parent's** path; `PathFull()` includes the object itself.
+- `GameObject.ParentPath()` is the **parent's** path; `FullPath()` includes the object itself.
 - `Remap` clamps to the output range; it is not an extrapolating lerp.

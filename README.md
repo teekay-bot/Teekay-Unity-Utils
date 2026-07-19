@@ -27,19 +27,19 @@ developer console. Small, tested, zero prefabs — everything is plain code.
 **Package Manager UI** — `Window ▸ Package Manager ▸ + ▸ Install package from git URL…` and paste:
 
 ```
-https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.1.0
+https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v3.0.0
 ```
 
 **Or edit `Packages/manifest.json`** directly:
 
 ```json
-"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v2.1.0"
+"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#v3.0.0"
 ```
 
 The two forms are **not** interchangeable — the Package Manager's git URL field takes the bare URL only,
 so pasting the `manifest.json` line into it fails.
 
-Drop the `#v2.1.0` suffix to track the latest commit instead of a release. The `.git` extension and
+Drop the `#v3.0.0` suffix to track the latest commit instead of a release. The `.git` extension and
 `?path=` are both required: without `.git` the Package Manager treats the URL as a package name.
 
 ## Documentation

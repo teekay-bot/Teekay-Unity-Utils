@@ -168,8 +168,18 @@ DevConsole.OnFocusChanged      += focused => playerInput.enabled = !focused;  //
 DevConsole.OnVisibilityChanged += open    => hud.SetVisible(!open);           // panel visibility only
 ```
 
-Both are static events. `OnLogAppended` and `OnLogCleared` are **instance** events —
-`DevConsole.Instance.OnLogAppended += ...`.
+### Events
+
+| Event | Fires |
+|---|---|
+| `OnFocusChanged(bool)` | The input field gains or loses focus. Gate gameplay input on this. |
+| `OnVisibilityChanged(bool)` | The console opens or closes. Panel visibility only. |
+| `OnLogAppended(ConsoleLogEntry)` | A line was appended — mirror the log elsewhere. |
+| `OnLogCleared()` | The log was cleared. |
+
+All four are **static**, and all four are cleared before each play session, so a handler from the
+previous session cannot survive into the next one with "Enter Play Mode without domain reload"
+enabled. Subscribe in `OnEnable`, unsubscribe in `OnDisable`, as with any long-lived event.
 
 ---
 

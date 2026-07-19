@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-07-19
+
+An API consistency pass. Every change is small, and every one of them is breaking — hence the major
+bump rather than a minor. Nothing in the package's own code or demos relied on the old shapes.
+
+### Fixed
+
+- **Static console events leaked across play sessions.** `OnVisibilityChanged` and `OnFocusChanged` were static with nothing ever clearing them, so with *Enter Play Mode without domain reload* enabled, handlers registered by one session survived into the next and fired against destroyed objects — a leak that grew with every press of Play. All console events are now cleared at `SubsystemRegistration`, before any `Awake`.
+
+### Changed
+
+- **BREAKING — `DevConsole.OnLogAppended` and `OnLogCleared` are now static.** They were the only instance events on a class whose entire public surface is static, so reaching for them the obvious way (`DevConsole.OnLogAppended += …`) was a compile error. Drop the `.Instance`.
+- **BREAKING — `GameObjectExtensions.Path()` is now `ParentPath()`, and `PathFull()` is now `FullPath()`.** `Path()` returned the *parent's* path, which the name did nothing to suggest; the pair now says which is which and shares a suffix.
+- **BREAKING — the DevConsole UI types are `internal`.** `ConsoleUI`, `ConsoleWindowDragHandle`, `ConsoleWindowResizeHandle`, `ConsoleSuggestionRow` and `ResizeEdges` were public but are pure internal wiring. `ConsoleUI.SetOpen`/`Bind` in particular let a consumer drive the window directly, desynchronising it from `DevConsole`'s own open/focus bookkeeping and bypassing the `ConsoleEnabled` gate that keeps the console out of release builds. Use the `DevConsole` static API instead.
+
 ## [2.1.0] - 2026-07-19
 
 A DevConsole UX/polish release: the log becomes a real list instead of one giant string,
