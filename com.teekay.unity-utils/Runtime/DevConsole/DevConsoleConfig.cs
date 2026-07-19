@@ -75,6 +75,31 @@ namespace TeekayUtils.DevConsole
         public float panelHeightRatio = 0.5f;
         [Tooltip("Font size for log + input text.")]
         public int fontSize = 14;
+        [Tooltip("Font for ALL console text. None = TMP's default font. Assign a monospace TMP font " +
+                 "(JetBrains Mono, Fira Code, ...) if you want columned output (help, binds) to line up.")]
+        public TMPro.TMP_FontAsset fontAsset;
+
+        // ─────────────────────────────────────────────────────────────
+        //  Chrome theme — window/chrome colors (content colors are below)
+        // ─────────────────────────────────────────────────────────────
+
+        [Header("Chrome theme")]
+        [Tooltip("Window background. Slightly translucent by default so the game stays visible behind.")]
+        public Color chromeWindowColor = new(0.055f, 0.063f, 0.078f, 0.97f);
+        [Tooltip("Elevated surfaces: input card, suggestion dropdown, filter row.")]
+        public Color chromeElevatedColor = new(0.086f, 0.098f, 0.122f, 1f);
+        [Tooltip("Hover tint for rows and list items.")]
+        public Color chromeHoverColor = new(0.118f, 0.137f, 0.165f, 1f);
+        [Tooltip("Primary text: log lines, typed input.")]
+        public Color chromeTextPrimary = new(0.92f, 0.94f, 0.96f);
+        [Tooltip("Muted text: title, descriptions, inactive toolbar buttons.")]
+        public Color chromeTextMuted = new(0.55f, 0.60f, 0.66f);
+        [Tooltip("Subtle text: timestamps, position indicators.")]
+        public Color chromeTextSubtle = new(0.38f, 0.42f, 0.48f);
+        [Tooltip("Accent: caret, focus ring, selection, active toggles. Hover/selection tints are derived from this.")]
+        public Color accentColor = new(0.133f, 0.827f, 0.933f, 1f);
+        [Tooltip("Error accent: input-row flash on failed commands, close-button hover.")]
+        public Color errorAccentColor = new(0.96f, 0.42f, 0.45f, 1f);
 
         // ─────────────────────────────────────────────────────────────
         //  Buffers

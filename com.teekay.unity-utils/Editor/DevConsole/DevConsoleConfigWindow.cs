@@ -216,7 +216,20 @@ namespace TeekayUtils.DevConsole.EditorTools
 
             DrawSettingsCard("Interface", "Panel sizing and text.",
                 ("panelHeightRatio", "Panel Height"),
-                ("fontSize", "Font Size"));
+                ("fontSize", "Font Size"),
+                ("fontAsset", "Font Asset"));
+
+            DrawSettingsCard("Chrome Theme",
+                "Window chrome colors. Hover/selection tints derive from the accent, so a retint " +
+                "is usually just Accent plus the two surface colors.",
+                ("chromeWindowColor", "Window"),
+                ("chromeElevatedColor", "Elevated"),
+                ("chromeHoverColor", "Hover"),
+                ("chromeTextPrimary", "Text Primary"),
+                ("chromeTextMuted", "Text Muted"),
+                ("chromeTextSubtle", "Text Subtle"),
+                ("accentColor", "Accent"),
+                ("errorAccentColor", "Error Accent"));
 
             DrawSettingsCard("Buffers", "Ring-buffer limits — oldest entries drop when full.",
                 ("maxLogEntries", "Max Log Entries"),
