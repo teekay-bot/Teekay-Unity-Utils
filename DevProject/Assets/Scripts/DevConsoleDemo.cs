@@ -44,6 +44,17 @@ public class DevConsoleDemo : MonoBehaviour
 
         DevConsole.RegisterBool("demo.autospin", "Whether demo cubes spin.",
             () => autoSpin, v => autoSpin = v);
+
+        // Exercises the 2.1.0 log-view features: identical lines collapse into one ×N row,
+        // and lines arriving while you're scrolled up surface the "N new" jump pill.
+        DevConsole.RegisterCommand("demo.spam",
+            "Log the same line N times (collapses to one ×N row), then N distinct lines. Usage: demo.spam [count]",
+            args =>
+            {
+                int count = args.AsInt(0, 20);
+                for (int i = 0; i < count; i++) DevConsole.Log("Demo", "spammy repeated line");
+                for (int i = 0; i < count; i++) DevConsole.Log("Demo", $"distinct line {i}");
+            });
     }
 
     void Update()
@@ -57,9 +68,10 @@ public class DevConsoleDemo : MonoBehaviour
         rich ??= new GUIStyle(GUI.skin.label) { richText = true };
         GUILayout.BeginArea(new Rect(10, 10, 470, 120), GUI.skin.box);
         GUILayout.Label("<b>DevConsole demo</b> — press <b>F12</b> to open/close", rich);
-        GUILayout.Label("Try:  help   |   demo.spawncube 10   |   demo.cubescale 2");
+        GUILayout.Label("Try:  help   |   demo.spawncube 10   |   demo.cubescale 2   |   demo.spam 30");
         GUILayout.Label("      demo.autospin off   |   bind F3 \"demo.spawncube 3\"   |   clear");
         GUILayout.Label("Autocomplete: type 'demo' and watch suggestions; Tab accepts the ghost hint.");
+        GUILayout.Label("New: click a log line to copy it. Toolbar: Clear/Copy/Filter. Scroll up + demo.spam → jump pill.");
         GUILayout.EndArea();
     }
 
@@ -69,5 +81,6 @@ public class DevConsoleDemo : MonoBehaviour
         DevConsole.Unregister("demo.clear");
         DevConsole.Unregister("demo.cubescale");
         DevConsole.Unregister("demo.autospin");
+        DevConsole.Unregister("demo.spam");
     }
 }
