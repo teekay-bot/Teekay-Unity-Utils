@@ -30,7 +30,7 @@ namespace TeekayUtils.DevConsole
 
         ConsoleRegistry _registry;
         ConsoleHistory _history;
-        Queue<ConsoleLogEntry> _logBuffer;
+        ConsoleLogBuffer _logBuffer;
         ConsoleUI _ui;
         ConsoleBindings _bindings;
         // All CVars we've registered. Tracked separately from the registry so we can
@@ -68,6 +68,9 @@ namespace TeekayUtils.DevConsole
         public event Action<ConsoleLogEntry> OnLogAppended;
         /// <summary>Fires when the log buffer is cleared.</summary>
         public event Action OnLogCleared;
+        /// <summary>Fires when an executed command line fails (unknown name, bad CVar value, or a
+        /// throwing handler). The UI uses it for an error flash on the input row.</summary>
+        internal event Action OnExecuteFailed;
         /// <summary>
         /// Fires whenever the console opens or closes (true = opened). Use for things tied
         /// to "is the panel visible" (e.g., show/hide other HUD elements). For input blocking
@@ -153,7 +156,7 @@ namespace TeekayUtils.DevConsole
 
             _registry  = new ConsoleRegistry();
             _history   = new ConsoleHistory(DevConsoleSettings.MaxHistoryEntries);
-            _logBuffer = new Queue<ConsoleLogEntry>(DevConsoleSettings.MaxLogEntries);
+            _logBuffer = new ConsoleLogBuffer();
             _allCVars  = new List<ConsoleCVar>();
             _bindings  = new ConsoleBindings();
             _bindings.Load();
@@ -316,12 +319,16 @@ namespace TeekayUtils.DevConsole
 
         void AppendLog(ConsoleLogEntry entry)
         {
-            if (_logBuffer.Count >= DevConsoleSettings.MaxLogEntries) _logBuffer.Dequeue();
-            _logBuffer.Enqueue(entry);
+            // The buffer collapses consecutive identical lines into one entry with a Count.
+            // OnLogAppended fires either way — subscribers repaint, they don't accumulate.
+            _logBuffer.Append(entry, DevConsoleSettings.MaxLogEntries);
             OnLogAppended?.Invoke(entry);
         }
 
         public IEnumerable<ConsoleLogEntry> EnumerateLog() => _logBuffer;
+
+        /// <summary>Indexed access to the log for the UI's virtualized view.</summary>
+        internal ConsoleLogBuffer LogBuffer => _logBuffer;
 
         public void ClearLog()
         {
@@ -431,9 +438,14 @@ namespace TeekayUtils.DevConsole
                     // Join the rest as a single value (so quoted strings work for StringCVar).
                     string value = tokens.Length == 2 ? tokens[1] : string.Join(" ", tokens, 1, tokens.Length - 1);
                     if (cvar.TrySetFromString(value, out string err))
+                    {
                         Log(DevConsoleSettings.CATEGORY_DEFAULT, $"{cvar.Name} = {cvar.GetValueAsString()}");
+                    }
                     else
+                    {
                         Log(DevConsoleSettings.CATEGORY_ERROR, $"set {cvar.Name}: {err}");
+                        OnExecuteFailed?.Invoke();
+                    }
                 }
                 return;
             }
@@ -447,11 +459,13 @@ namespace TeekayUtils.DevConsole
                 {
                     Log(DevConsoleSettings.CATEGORY_ERROR, $"{cmd.Name} threw: {e.Message}");
                     Debug.LogException(e);
+                    OnExecuteFailed?.Invoke();
                 }
                 return;
             }
 
             Log(DevConsoleSettings.CATEGORY_ERROR, $"Unknown command: '{name}'. Type 'help' for a list.");
+            OnExecuteFailed?.Invoke();
         }
 
         // ─────────────────────────────────────────────────────────────────────
