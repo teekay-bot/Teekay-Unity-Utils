@@ -16,7 +16,8 @@ namespace TeekayUtils.DevConsole.UI
     /// field selected after the tap.
     /// </summary>
     [RequireComponent(typeof(Graphic))]
-    public sealed class ConsoleSuggestionRow : MonoBehaviour, IPointerClickHandler
+    public sealed class ConsoleSuggestionRow : MonoBehaviour, IPointerClickHandler,
+        IPointerEnterHandler, IPointerExitHandler
     {
         /// <summary>Index of this row within the visible window (0..MAX_VISIBLE-1), not the match index.</summary>
         public int VisualIndex;
@@ -24,6 +25,23 @@ namespace TeekayUtils.DevConsole.UI
         /// <summary>Invoked with <see cref="VisualIndex"/> when the row is tapped/clicked.</summary>
         public Action<int> Clicked;
 
+        /// <summary>Invoked when the pointer enters or leaves the row, so the owner can re-tint.</summary>
+        public Action HoverChanged;
+
+        public bool Hovered { get; private set; }
+
         public void OnPointerClick(PointerEventData eventData) => Clicked?.Invoke(VisualIndex);
+
+        public void OnPointerEnter(PointerEventData _) { Hovered = true; HoverChanged?.Invoke(); }
+        public void OnPointerExit(PointerEventData _) { Hovered = false; HoverChanged?.Invoke(); }
+
+        void OnDisable()
+        {
+            // Rows are pooled and toggled off while hovered all the time — never let a stale
+            // hover survive into the next reuse.
+            if (!Hovered) return;
+            Hovered = false;
+            HoverChanged?.Invoke();
+        }
     }
 }

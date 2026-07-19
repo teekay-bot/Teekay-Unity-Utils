@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -60,36 +59,41 @@ namespace TeekayUtils.DevConsole.UI
         float SuggestionRowHeight => DevConsoleSettings.FontSize + SUGGESTION_PADDING_V * 2f;
 
         // ─────────────────────────────────────────────────────────────────────
-        //  Theme — Warp/Linear inspired, deep blue-black + cyan accent. Centralised so
-        //  the entire chrome can be retoned by tweaking values in one place.
+        //  Theme — thin aliases over DevConsoleSettings, which is the single theming surface
+        //  (chrome and content colors live together there and are config-editable). Translucent
+        //  accent variants are derived from AccentColor so retinting stays a one-field change.
         // ─────────────────────────────────────────────────────────────────────
         static class Theme
         {
-            // Surfaces (three elevation tiers: window < elevated < hover).
-            public static readonly Color BgWindow   = new(0.055f, 0.063f, 0.078f, 0.97f); // #0E1014
-            public static readonly Color BgElevated = new(0.086f, 0.098f, 0.122f, 1.00f); // #16191F
-            public static readonly Color BgHover    = new(0.118f, 0.137f, 0.165f, 1.00f); // #1E232A
+            public static Color BgWindow   => DevConsoleSettings.ChromeWindowColor;
+            public static Color BgElevated => DevConsoleSettings.ChromeElevatedColor;
+            public static Color BgHover    => DevConsoleSettings.ChromeHoverColor;
 
             // Borders / separators — almost-invisible white on dark.
             public static readonly Color BorderSubtle  = new(1f, 1f, 1f, 0.05f);
             public static readonly Color SeparatorLine = new(1f, 1f, 1f, 0.07f);
 
-            // Text tiers.
-            public static readonly Color TextPrimary = new(0.92f, 0.94f, 0.96f);
-            public static readonly Color TextMuted   = new(0.55f, 0.60f, 0.66f);
-            public static readonly Color TextSubtle  = new(0.38f, 0.42f, 0.48f);
+            public static Color TextPrimary => DevConsoleSettings.ChromeTextPrimary;
+            public static Color TextMuted   => DevConsoleSettings.ChromeTextMuted;
+            public static Color TextSubtle  => DevConsoleSettings.ChromeTextSubtle;
 
-            // Accent — Tailwind cyan-400 (#22D3EE) and its translucent variants.
-            public static readonly Color Accent      = new(0.133f, 0.827f, 0.933f, 1.00f);
-            public static readonly Color AccentMuted = new(0.133f, 0.827f, 0.933f, 0.55f);
-            public static readonly Color AccentSoft  = new(0.133f, 0.827f, 0.933f, 0.14f);
+            public static Color Accent      => DevConsoleSettings.AccentColor;
+            public static Color AccentMuted => WithAlpha(DevConsoleSettings.AccentColor, 0.55f);
+            public static Color AccentSoft  => WithAlpha(DevConsoleSettings.AccentColor, 0.14f);
 
-            // Close button — transparent at rest, soft red on hover.
-            public static readonly Color CloseIdle  = new(0f, 0f, 0f, 0f);
-            public static readonly Color CloseHover = new(0.96f, 0.42f, 0.45f, 0.18f);
+            // Close button — transparent at rest, soft error tint on hover.
+            public static readonly Color CloseIdle = new(0f, 0f, 0f, 0f);
+            public static Color CloseHover => WithAlpha(DevConsoleSettings.ErrorAccentColor, 0.18f);
 
-            // Selection background for suggestion rows (cyan tinted, mostly transparent).
-            public static readonly Color RowSelected = new(0.133f, 0.827f, 0.933f, 0.16f);
+            // Selection background for suggestion rows (accent tinted, mostly transparent).
+            public static Color RowSelected => WithAlpha(DevConsoleSettings.AccentColor, 0.16f);
+
+            /// <summary>Console font: the configured asset, or TMP's default when unset.</summary>
+            public static TMP_FontAsset Font =>
+                DevConsoleSettings.FontAsset != null ? DevConsoleSettings.FontAsset
+                                                     : TMP_Settings.defaultFontAsset;
+
+            static Color WithAlpha(Color c, float a) { c.a = a; return c; }
 
             // Procedurally-generated rounded sprite. Built once on first access (~1ms) and
             // cached. White-tinted by Image.color downstream. Generating it ourselves avoids the
@@ -146,12 +150,38 @@ namespace TeekayUtils.DevConsole.UI
         RectTransform _canvasRt;
         GameObject _window;
         RectTransform _windowRt;
-        TMP_Text _logText;
+        CanvasGroup _windowGroup;  // open/close fade
         ScrollRect _scroll;
+        RectTransform _scrollRt;
+        ConsoleLogView _logView;
         TMP_InputField _input;
         TMP_Text _ghostText;
+        RectTransform _ghostRt;
+        TMP_Text _inputTextComponent; // the input's own text — measured to place the ghost
+        Image _inputBg;            // flashed toward the error accent on failed commands
         Image _inputFocusRing;     // 1px cyan underline that lights up while typing
         EventSystem _createdEventSystem;   // non-null only if the console spawned its own EventSystem
+
+        // — Toolbar / filter row —
+        TMP_InputField _searchInput;
+        GameObject _filterRow;
+        RectTransform _filterChipStrip;
+        readonly List<(RectTransform rt, float width)> _filterChips = new();
+        int _filterChipLines = 1;
+        float _lastChipLayoutWidth = -1f;
+        TMP_Text _filterButtonLabel;
+        GameObject _jumpPill;
+        TMP_Text _jumpPillLabel;
+
+        // — Animation / feedback state (unscaled time — the console pauses the game on focus) —
+        const float OPEN_ANIM_SECONDS = 0.12f;
+        const float SLIDE_PIXELS = 8f;
+        // Ghost rect is the input text's rect shifted right by the typed width, so it needs slack
+        // on the right or a long line would clip the suffix. Clipped by the viewport mask anyway.
+        const float GHOST_EXTRA_WIDTH = 400f;
+        float _openAnim;       // 0 = fully closed, 1 = fully open
+        float _openAnimTarget;
+        float _errorFlash;     // 1 → 0 after a failed command
 
         // — Suggestion dropdown —
         // Visible rows are fixed (panel footprint matches the original 5-row design); the
@@ -161,6 +191,7 @@ namespace TeekayUtils.DevConsole.UI
         const int MAX_COLLECTED_SUGGESTIONS = 64;
         GameObject _suggestionPanel;
         readonly TMP_Text[] _suggestionRows = new TMP_Text[MAX_VISIBLE_SUGGESTIONS];
+        readonly ConsoleSuggestionRow[] _suggestionRowHandlers = new ConsoleSuggestionRow[MAX_VISIBLE_SUGGESTIONS];
         readonly List<ConsoleAutocomplete.MatchResult> _matchesBuf = new(MAX_COLLECTED_SUGGESTIONS);
         int _selectedSuggestion = -1; // -1 = none
         int _suggestionViewOffset = 0; // index of the first visible match in _matchesBuf
@@ -173,11 +204,6 @@ namespace TeekayUtils.DevConsole.UI
         bool _touchMode;
         bool _touchFocused;
 
-        // — Log redraw state —
-        readonly StringBuilder _logBuilder = new(4096);
-        bool _logDirty = true;
-        bool _scrollToBottomQueued;
-
         // ─────────────────────────────────────────────────────────────────────
         //  Lifecycle
         // ─────────────────────────────────────────────────────────────────────
@@ -188,6 +214,7 @@ namespace TeekayUtils.DevConsole.UI
             _touchMode = Application.isMobilePlatform;
             _console.OnLogAppended += OnLogAppended;
             _console.OnLogCleared  += OnLogCleared;
+            _console.OnExecuteFailed += OnExecuteFailed;
             EnsureBuilt();
         }
 
@@ -197,6 +224,7 @@ namespace TeekayUtils.DevConsole.UI
             {
                 _console.OnLogAppended -= OnLogAppended;
                 _console.OnLogCleared  -= OnLogCleared;
+                _console.OnExecuteFailed -= OnExecuteFailed;
             }
             if (_input != null)
             {
@@ -216,20 +244,31 @@ namespace TeekayUtils.DevConsole.UI
             // Drop a console-made EventSystem if the scene now provides its own, so we never
             // end up with two. Runs on both open and close.
             CleanupRedundantEventSystem();
-            _window.SetActive(open);
+            _openAnimTarget = open ? 1f : 0f;
             if (open)
             {
+                // Activate immediately and fade in; focus is granted right away so the user can
+                // type before the (120ms, unscaled) tween finishes — animation never gates input.
+                _window.SetActive(true);
+                if (_windowGroup != null)
+                {
+                    // Interactive from frame one — only the visuals fade in.
+                    _windowGroup.interactable = true;
+                    _windowGroup.blocksRaycasts = true;
+                }
                 // Create an EventSystem only when actually opening and the scene has none.
                 EnsureEventSystem();
-                MarkLogDirty();
+                _logView?.MarkDirty();
+                _logView?.ScrollToBottom();
                 FocusInput();
             }
             else
             {
-                // Clear leftover text and drop focus so gameplay keys aren't swallowed.
+                // Drop focus and clear text NOW — the game unpauses instantly; only the fade-out
+                // is deferred. SetActive(false) happens in the tween when alpha reaches zero.
                 if (_input != null) _input.text = string.Empty;
                 if (_ghostText != null) _ghostText.text = string.Empty;
-                if (EventSystem.current != null &&
+                if (EventSystem.current != null && _input != null &&
                     EventSystem.current.currentSelectedGameObject == _input.gameObject)
                     EventSystem.current.SetSelectedGameObject(null);
                 // Reset focus tracking so a later re-open re-fires NotifyFocusChanged(true) and
@@ -237,6 +276,43 @@ namespace TeekayUtils.DevConsole.UI
                 // window is inactive, so without this the stale "true" would suppress the next open).
                 _lastFocusState = false;
                 _touchFocused   = false;
+                if (_windowGroup != null)
+                {
+                    // No interaction with a closing window — clicks fall through to the game.
+                    _windowGroup.interactable = false;
+                    _windowGroup.blocksRaycasts = false;
+                }
+                // Already fully faded (initial close at startup, or close-while-closed): the
+                // tween would early-out on target == current, so deactivate here.
+                if (Mathf.Approximately(_openAnim, 0f)) _window.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Open/close tween — unscaled time, because the console pauses the game (timeScale = 0)
+        /// while focused; scaled time would freeze the animation exactly when it plays.
+        /// Runs in Update so it still advances while LateUpdate's early-out is irrelevant.
+        /// </summary>
+        void Update()
+        {
+            if (_windowGroup == null || Mathf.Approximately(_openAnim, _openAnimTarget)) return;
+
+            _openAnim = Mathf.MoveTowards(_openAnim, _openAnimTarget,
+                Time.unscaledDeltaTime / OPEN_ANIM_SECONDS);
+            float eased = 1f - (1f - _openAnim) * (1f - _openAnim); // ease-out quad
+            _windowGroup.alpha = eased;
+            // Slight downward settle on open (window slides from a few px above its rest spot).
+            _windowRt.anchoredPosition = _windowPos + new Vector2(0f, SLIDE_PIXELS * (1f - eased));
+
+            if (Mathf.Approximately(_openAnim, 1f))
+            {
+                _windowGroup.interactable = true;
+                _windowGroup.blocksRaycasts = true;
+                _windowRt.anchoredPosition = _windowPos;
+            }
+            else if (Mathf.Approximately(_openAnim, 0f))
+            {
+                _window.SetActive(false);
             }
         }
 
@@ -338,6 +414,12 @@ namespace TeekayUtils.DevConsole.UI
             PlayerPrefs.SetFloat(PREF_KEY_POS_Y,  _windowPos.y);
             PlayerPrefs.SetFloat(PREF_KEY_SIZE_X, _windowSize.x);
             PlayerPrefs.SetFloat(PREF_KEY_SIZE_Y, _windowSize.y);
+
+            // A narrower window fits fewer chips per line, so the wrap has to be redone — chips
+            // stay clipped otherwise, which is the whole complaint the wrapping layout fixes.
+            if (_filterRow != null && _filterRow.activeSelf &&
+                !Mathf.Approximately(_lastChipLayoutWidth, _windowSize.x))
+                LayoutFilterChips();
         }
 
         const string PREF_KEY_POS_X  = "DevConsole.WindowPos.X";
@@ -362,14 +444,9 @@ namespace TeekayUtils.DevConsole.UI
         //  Log re-render
         // ─────────────────────────────────────────────────────────────────────
 
-        void OnLogAppended(ConsoleLogEntry _) => MarkLogDirty();
-        void OnLogCleared() => MarkLogDirty();
-
-        void MarkLogDirty()
-        {
-            _logDirty = true;
-            _scrollToBottomQueued = true;
-        }
+        void OnLogAppended(ConsoleLogEntry _) => _logView?.NotifyAppended();
+        void OnLogCleared() => _logView?.NotifyCleared();
+        void OnExecuteFailed() => _errorFlash = 1f;
 
         void LateUpdate()
         {
@@ -393,22 +470,20 @@ namespace TeekayUtils.DevConsole.UI
                 {
                     _touchFocused = insideConsole;
                 }
-                else if (insideConsole &&
-                         EventSystem.current.currentSelectedGameObject != _input.gameObject)
+                else if (insideConsole && !IsConsoleFieldSelected())
                 {
+                    // Don't steal selection from the filter search field — it's part of the
+                    // console too; yanking focus to the command input would make it untypable.
                     EventSystem.current.SetSelectedGameObject(_input.gameObject);
                     _input.ActivateInputField();
                 }
             }
 
             // Poll focus state. Touch mode uses the press-region flag (above); desktop uses the
-            // EventSystem selection. A transition tells DevConsole to apply/unwind pause + cursor
-            // + input-block side effects.
-            bool focused = _touchMode
-                ? _touchFocused
-                : (_input != null
-                    && EventSystem.current != null
-                    && EventSystem.current.currentSelectedGameObject == _input.gameObject);
+            // EventSystem selection (command input OR filter search — both count as "typing into
+            // the console" for pause/cursor purposes). A transition tells DevConsole to
+            // apply/unwind pause + cursor + input-block side effects.
+            bool focused = _touchMode ? _touchFocused : IsConsoleFieldSelected();
             if (focused != _lastFocusState)
             {
                 _lastFocusState = focused;
@@ -416,36 +491,53 @@ namespace TeekayUtils.DevConsole.UI
                 if (_inputFocusRing != null) _inputFocusRing.enabled = focused;
             }
 
-            // Only consume keyboard when the input field has focus. Otherwise the user is
-            // playing the game with the console open as a monitor — Enter/Tab/Arrows should
-            // pass through to gameplay, not get swallowed by the console.
-            if (focused) HandleInputKeys();
+            // Only consume keyboard when the COMMAND input has focus (not the search field —
+            // Enter there must not execute a command). Otherwise the user is playing the game
+            // with the console open as a monitor — keys pass through to gameplay.
+            if (focused && EventSystem.current != null &&
+                EventSystem.current.currentSelectedGameObject == _input.gameObject)
+                HandleInputKeys();
 
-            if (_logDirty)
-            {
-                RebuildLogText();
-                _logDirty = false;
-            }
-
-            if (_scrollToBottomQueued)
-            {
-                Canvas.ForceUpdateCanvases();
-                if (_scroll != null) _scroll.verticalNormalizedPosition = 0f;
-                _scrollToBottomQueued = false;
-            }
+            float dt = Time.unscaledDeltaTime;
+            _logView?.Tick(dt);
+            UpdateGhostPosition();
+            UpdateErrorFlash(dt);
+            UpdateJumpPill();
         }
 
-        void RebuildLogText()
+        bool IsConsoleFieldSelected()
         {
-            _logBuilder.Clear();
-            foreach (var entry in _console.EnumerateLog())
-            {
-                _logBuilder
-                    .Append("<color=#").Append(ColorUtility.ToHtmlStringRGBA(entry.Color)).Append('>')
-                    .Append($"[{entry.Category}] {entry.Message}")
-                    .Append("</color>\n");
-            }
-            _logText.text = _logBuilder.ToString();
+            if (EventSystem.current == null) return false;
+            GameObject selected = EventSystem.current.currentSelectedGameObject;
+            if (selected == null) return false;
+            return (_input != null && selected == _input.gameObject)
+                || (_searchInput != null && selected == _searchInput.gameObject);
+        }
+
+        // Failed command → the input card and focus ring pulse toward the error accent, then
+        // settle back. Complements the error line in the log, which is easy to miss mid-typing.
+        void UpdateErrorFlash(float unscaledDeltaTime)
+        {
+            if (_errorFlash <= 0f || _inputBg == null) return;
+            _errorFlash = Mathf.Max(0f, _errorFlash - unscaledDeltaTime * 2.5f);
+
+            Color error = DevConsoleSettings.ErrorAccentColor;
+            Color cardError = Color.Lerp(Theme.BgElevated, error, 0.35f);
+            _inputBg.color = Color.Lerp(Theme.BgElevated, cardError, _errorFlash);
+            if (_inputFocusRing != null)
+                _inputFocusRing.color = Color.Lerp(Theme.Accent, error, _errorFlash);
+        }
+
+        // "↓ N new" pill — visible only when scrolled up while new lines arrive. Hidden while the
+        // suggestion dropdown is up (they'd overlap; typing takes precedence).
+        void UpdateJumpPill()
+        {
+            if (_jumpPill == null || _logView == null) return;
+            bool show = _logView.UnseenCount > 0 && !_logView.AtBottom
+                        && (_suggestionPanel == null || !_suggestionPanel.activeSelf);
+            if (_jumpPill.activeSelf != show) _jumpPill.SetActive(show);
+            // ASCII only — arrow glyphs (↓/▼) aren't guaranteed in the default TMP font atlas.
+            if (show) _jumpPillLabel.text = $"{_logView.UnseenCount} new";
         }
 
         // True when a screen-space press falls within the window OR its straddling resize handles
@@ -582,20 +674,66 @@ namespace TeekayUtils.DevConsole.UI
         void OnInputValueChanged(string newText) => UpdateGhost(newText);
 
         /// <summary>
-        /// Update the ghost overlay text. The trick: render the typed portion as fully
-        /// transparent (it acts as a spacer) and the suggested suffix in gray. The user's real
-        /// text (from TMP_InputField's own text component) draws on top in white at the exact
-        /// same metrics, so the visible result is white-typed + gray-suffix, perfectly aligned.
-        /// No text-width measurement needed.
+        /// Place the ghost suffix at the pen position of the input's OWN rendered text.
+        /// <para>
+        /// This is the third alignment approach, and the only correct one. A transparent-prefix
+        /// spacer and an independent width measurement both re-derive TMP's layout from outside,
+        /// and both drifted — TMP_InputField shifts its text component's rect to keep the caret
+        /// in view (reserving margin + caret width), which no external measurement sees. Reading
+        /// <c>textInfo.characterInfo[last].xAdvance</c> from the component itself is ground truth
+        /// by construction: kerning, spacing and the field's scroll offset are already in it.
+        /// Runs in LateUpdate; ForceMeshUpdate makes textInfo current for THIS frame's string
+        /// (TMP normally defers mesh regeneration to the canvas update, which happens after
+        /// LateUpdate), so the ghost lands correctly with no one-frame lag.
+        /// </para>
+        /// </summary>
+        void UpdateGhostPosition()
+        {
+            if (_ghostText == null || _ghostRt == null || _inputTextComponent == null) return;
+            if (string.IsNullOrEmpty(_ghostText.text)) return;
+
+            RectTransform src = _inputTextComponent.rectTransform;
+
+            // Mirror the input's text rect outright — anchors, pivot, size. Both are children of
+            // the same viewport, so this gives the ghost an identical coordinate frame and it
+            // inherits the field's VERTICAL placement rather than guessing at it. Only X is then
+            // offset; leaving the ghost its own rect is what left it sitting too high.
+            _ghostRt.anchorMin = src.anchorMin;
+            _ghostRt.anchorMax = src.anchorMax;
+            _ghostRt.pivot     = src.pivot;
+            // Widening grows the rect around the PIVOT, so with the input text's centred pivot the
+            // left edge — where MidlineLeft starts drawing — slides left by extra * pivot.x. That
+            // pushed the whole ghost out of the viewport mask. Compensate below.
+            _ghostRt.sizeDelta = src.sizeDelta + new Vector2(GHOST_EXTRA_WIDTH, 0f);
+
+            // Pen position after the typed text, in that shared frame. Empty input starts exactly
+            // where the input's own text starts.
+            float penX = src.rect.xMin;
+            string typed = _input != null ? _input.text : string.Empty;
+            if (!string.IsNullOrEmpty(typed))
+            {
+                _inputTextComponent.ForceMeshUpdate();
+                TMP_TextInfo info = _inputTextComponent.textInfo;
+                int last = Mathf.Min(info.characterCount, typed.Length) - 1;
+                if (last >= 0) penX = info.characterInfo[last].xAdvance;
+            }
+
+            _ghostRt.anchoredPosition = src.anchoredPosition
+                + new Vector2(penX - src.rect.xMin + GHOST_EXTRA_WIDTH * src.pivot.x, 0f);
+        }
+
+        /// <summary>
+        /// Update the ghost overlay's CONTENT. Its position is applied in LateUpdate by
+        /// <see cref="UpdateGhostPosition"/> — TMP defers mesh regeneration to the canvas
+        /// update, so at onValueChanged time textInfo still describes the previous string.
         /// </summary>
         void UpdateGhost(string text)
         {
             if (_ghostText == null) return;
             if (ConsoleAutocomplete.TryGetCompletion(text, DevConsole.Registry, out string suffix))
             {
-                _ghostText.text = "<color=#00000000>" + text + "</color>" +
-                                  "<color=#" + ColorUtility.ToHtmlStringRGBA(DevConsoleSettings.HintColor) + ">" +
-                                  suffix + "</color>";
+                _ghostText.color = DevConsoleSettings.HintColor;
+                _ghostText.text = suffix;
             }
             else
             {
@@ -637,6 +775,12 @@ namespace TeekayUtils.DevConsole.UI
             var panelRt = (RectTransform)_suggestionPanel.transform;
             panelRt.sizeDelta = new Vector2(panelRt.sizeDelta.x, SuggestionRowHeight * visibleCount);
 
+            // Text tint hexes derived from the theme so a retint carries through rich text too.
+            string accentHex  = ColorUtility.ToHtmlStringRGB(Theme.Accent);
+            string mutedHex   = ColorUtility.ToHtmlStringRGB(Theme.TextMuted);
+            string primaryHex = ColorUtility.ToHtmlStringRGB(Theme.TextPrimary);
+            string subtleHex  = ColorUtility.ToHtmlStringRGB(Theme.TextSubtle);
+
             for (int i = 0; i < MAX_VISIBLE_SUGGESTIONS; i++)
             {
                 int matchIdx = _suggestionViewOffset + i;
@@ -650,11 +794,11 @@ namespace TeekayUtils.DevConsole.UI
                 var m = _matchesBuf[matchIdx];
                 bool selected = matchIdx == _selectedSuggestion;
 
-                // Tag colors: cyan for CVar (value-bearing), muted gray for Cmd (action).
+                // Tag colors: accent for CVar (value-bearing), muted gray for Cmd (action).
                 string kind = m.IsCVar ? "VAR" : "CMD";
-                string kindColor = m.IsCVar ? "#22D3EE" : "#7C8390";
-                string nameColor = selected ? "#FFFFFF" : "#E8EBEF";
-                string descColor = selected ? "#9CA3AF" : "#6B7280";
+                string kindColor = m.IsCVar ? "#" + accentHex : "#" + mutedHex;
+                string nameColor = selected ? "#FFFFFF" : "#" + primaryHex;
+                string descColor = selected ? "#" + mutedHex : "#" + subtleHex;
 
                 string body = $"<color={kindColor}><size=80%><b>{kind}</b></size></color>  " +
                               $"<color={nameColor}><b>{m.Name}</b></color>";
@@ -664,15 +808,18 @@ namespace TeekayUtils.DevConsole.UI
                 // Append "(n/total)" position indicator to the highlighted row when scrolling is
                 // in play, so the user can see where they are in the full list.
                 if (selected && _matchesBuf.Count > MAX_VISIBLE_SUGGESTIONS)
-                    body += $"  <color=#4B5563><size=80%>{_selectedSuggestion + 1}/{_matchesBuf.Count}</size></color>";
+                    body += $"  <color=#{subtleHex}><size=80%>{_selectedSuggestion + 1}/{_matchesBuf.Count}</size></color>";
 
                 _suggestionRows[i].text = body;
 
-                // Selection chrome: tint background, light up the left accent stripe.
+                // Selection chrome: tint background (hover beats zebra, selection beats hover),
+                // light up the left accent stripe.
                 var rowParent = _suggestionRows[i].transform.parent;
                 var rowImage = rowParent.GetComponent<Image>();
+                bool hovered = _suggestionRowHandlers[i] != null && _suggestionRowHandlers[i].Hovered;
                 rowImage.color = selected ? Theme.RowSelected
-                                          : (i % 2 == 0 ? new Color(0f, 0f, 0f, 0f) : new Color(1f, 1f, 1f, 0.018f));
+                               : hovered ? Theme.BgHover
+                               : (i % 2 == 0 ? new Color(0f, 0f, 0f, 0f) : new Color(1f, 1f, 1f, 0.018f));
                 var stripeT = rowParent.Find("AccentStripe");
                 if (stripeT != null)
                 {
@@ -706,8 +853,10 @@ namespace TeekayUtils.DevConsole.UI
             BuildResizeHandles();
             BuildTitleBar();
             BuildLogScroll();
+            BuildFilterRow();
             BuildInputRow();
             BuildSuggestionPanel();
+            RefreshToolbarStates();
 
             // Restore previous layout from PlayerPrefs if available; otherwise default to a
             // 400×600 window in the top-left corner with a small margin.
@@ -780,9 +929,11 @@ namespace TeekayUtils.DevConsole.UI
 
         void BuildWindow()
         {
-            _window = new GameObject("Window", typeof(Image));
+            _window = new GameObject("Window", typeof(Image), typeof(CanvasGroup));
             _window.transform.SetParent(_canvas.transform, false);
             _windowRt = (RectTransform)_window.transform;
+            _windowGroup = _window.GetComponent<CanvasGroup>();
+            _windowGroup.alpha = 0f; // faded in by the open tween
             // Top-left anchor + pivot — anchoredPosition is the window's top-left corner.
             _windowRt.anchorMin = new Vector2(0f, 1f);
             _windowRt.anchorMax = new Vector2(0f, 1f);
@@ -847,14 +998,18 @@ namespace TeekayUtils.DevConsole.UI
             var labelGo = new GameObject("Title", typeof(RectTransform));
             labelGo.transform.SetParent(titleGo.transform, false);
             var label = labelGo.AddComponent<TextMeshProUGUI>();
-            label.font = TMP_Settings.defaultFontAsset;
+            label.font = Theme.Font;
             label.fontSize = DevConsoleSettings.FontSize - 1;
             label.fontStyle = FontStyles.Bold;
             label.characterSpacing = 4f;       // gives the uppercase title some breathing room
             label.color = Theme.TextMuted;
             label.text = "DEV CONSOLE";
-            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.alignment = TextAlignmentOptions.Left;
             label.raycastTarget = false;
+            // Never wrap: the toolbar eats into this label's width, and on a narrow window a
+            // wrapped title spills out of the (fixed-height) title bar instead of shrinking.
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
             var labelRt = label.rectTransform;
             labelRt.anchorMin = Vector2.zero;
             labelRt.anchorMax = Vector2.one;
@@ -892,7 +1047,7 @@ namespace TeekayUtils.DevConsole.UI
             var closeLabelGo = new GameObject("X", typeof(RectTransform));
             closeLabelGo.transform.SetParent(closeGo.transform, false);
             var closeLabel = closeLabelGo.AddComponent<TextMeshProUGUI>();
-            closeLabel.font = TMP_Settings.defaultFontAsset;
+            closeLabel.font = Theme.Font;
             closeLabel.fontSize = DevConsoleSettings.FontSize + 2;
             closeLabel.color = Theme.TextMuted;
             closeLabel.text = "×"; // multiplication sign — softer than 'X'
@@ -903,6 +1058,18 @@ namespace TeekayUtils.DevConsole.UI
             closeLabelRt.anchorMax = Vector2.one;
             closeLabelRt.offsetMin = Vector2.zero;
             closeLabelRt.offsetMax = Vector2.zero;
+
+            // Toolbar — compact text buttons stacked right-to-left from the close button.
+            // Text labels rather than icons: arbitrary glyphs aren't guaranteed in the default
+            // TMP font atlas, and at this size a word beats an ambiguous pictogram anyway.
+            float edge = TitleBarHeight + 2f; // left edge of the close button
+            edge += MakeTitleButton(titleGo.transform, "Clear", edge,
+                () => _console?.ClearLog(), out _);
+            edge += MakeTitleButton(titleGo.transform, "Copy", edge, CopyAllToClipboard, out _);
+            edge += MakeTitleButton(titleGo.transform, "Filter", edge, ToggleFilterRow,
+                out _filterButtonLabel);
+            // Shrink the title label so it never runs under the buttons on a narrow window.
+            labelRt.offsetMax = new Vector2(-(edge + 8f), 0f);
 
             // 1px hairline separator at the bottom of the title bar — the only visible boundary.
             var sepGo = new GameObject("Separator", typeof(Image));
@@ -918,44 +1085,254 @@ namespace TeekayUtils.DevConsole.UI
             sepImg.raycastTarget = false;
         }
 
+        /// <summary>
+        /// Compact title-bar text button. Stacks right-to-left: <paramref name="rightEdge"/> is
+        /// the distance from the bar's right edge to this button's right side. Returns the
+        /// horizontal space consumed (width + gap) so the caller can accumulate.
+        /// </summary>
+        float MakeTitleButton(Transform titleBar, string label, float rightEdge,
+                              UnityEngine.Events.UnityAction onClick, out TMP_Text labelText)
+        {
+            var go = new GameObject($"Toolbar{label}", typeof(Image), typeof(Button));
+            go.transform.SetParent(titleBar, false);
+
+            var text = new GameObject("Label", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
+            text.transform.SetParent(go.transform, false);
+            text.font = Theme.Font;
+            text.fontSize = Mathf.Max(9f, DevConsoleSettings.FontSize - 3);
+            text.fontStyle = FontStyles.Bold;
+            text.color = Theme.TextMuted;
+            text.text = label;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.raycastTarget = false;
+            var textRt = text.rectTransform;
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = Vector2.zero;
+            textRt.offsetMax = Vector2.zero;
+
+            float width = text.GetPreferredValues(label).x + 16f;
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(1f, 0.5f);
+            rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot     = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = new Vector2(-rightEdge, 0f);
+            rt.sizeDelta = new Vector2(width, TitleBarHeight - 10f);
+
+            var img = go.GetComponent<Image>();
+            img.sprite = Theme.Rounded;
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = 1.5f;
+            img.color = Color.white; // tinted by the ColorBlock
+
+            var btn = go.GetComponent<Button>();
+            btn.transition = Selectable.Transition.ColorTint;
+            btn.colors = new ColorBlock
+            {
+                normalColor      = new Color(0f, 0f, 0f, 0f),
+                highlightedColor = Theme.BgHover,
+                pressedColor     = Theme.AccentSoft,
+                selectedColor    = new Color(0f, 0f, 0f, 0f),
+                disabledColor    = new Color(0f, 0f, 0f, 0f),
+                colorMultiplier  = 1f,
+                fadeDuration     = 0.08f,
+            };
+            btn.navigation = new Navigation { mode = Navigation.Mode.None };
+            btn.onClick.AddListener(onClick);
+
+            labelText = text;
+            return width + 4f;
+        }
+
+        void CopyAllToClipboard()
+        {
+            if (_logView == null) return;
+            GUIUtility.systemCopyBuffer = _logView.BuildPlainText();
+        }
+
+        void ToggleFilterRow()
+        {
+            if (_filterRow == null) return;
+            bool show = !_filterRow.activeSelf;
+            _filterRow.SetActive(show);
+            if (show)
+            {
+                RebuildFilterChips();
+            }
+            else
+            {
+                // Hiding the row clears its filters — hidden-but-active filtering would look
+                // like lost log lines with no visible cause.
+                if (_searchInput != null) _searchInput.text = string.Empty;
+                _logView?.SetSearch(string.Empty);
+            }
+            ApplyLogScrollOffsets();
+            RefreshToolbarStates();
+        }
+
+        // Active toggles read as accent-colored labels; inactive ones stay muted.
+        void RefreshToolbarStates()
+        {
+            if (_filterButtonLabel != null)
+                _filterButtonLabel.color =
+                    _filterRow != null && _filterRow.activeSelf ? Theme.Accent : Theme.TextMuted;
+        }
+
+        const float CHIP_GAP = 4f;
+        const float SEARCH_WIDTH = 150f;
+
+        /// <summary>Height of one chip / the search box (font-scaled, like the other chrome rows).</summary>
+        float ChipHeight => DevConsoleSettings.FontSize + 6f;
+
+        /// <summary>
+        /// Filter-row height. Grows with the number of lines the category chips wrapped onto, so
+        /// every filter stays visible — the point of the row is seeing which categories exist, and
+        /// clipping (or hiding behind a horizontal scroll) defeats that.
+        /// </summary>
+        float FilterRowHeight => CHIP_GAP + Mathf.Max(1, _filterChipLines) * (ChipHeight + CHIP_GAP);
+
+        /// <summary>Width available to chips, derived from the window rather than a possibly-stale rect.</summary>
+        float ChipStripWidth =>
+            Mathf.Max(40f, _windowSize.x - PADDING * 2f - (SEARCH_WIDTH + 12f) - 5f);
+
+        /// <summary>
+        /// Position the log viewport between the title bar (plus the filter row when visible)
+        /// and the input row. Re-run when the filter row is toggled.
+        /// </summary>
+        void ApplyLogScrollOffsets()
+        {
+            if (_scrollRt == null) return;
+            float top = TitleBarHeight + 4f;
+            if (_filterRow != null && _filterRow.activeSelf) top += FilterRowHeight + 4f;
+            _scrollRt.offsetMin = new Vector2(PADDING + 2f, InputRowHeight + PADDING);
+            _scrollRt.offsetMax = new Vector2(-(PADDING + 2f), -top);
+        }
+
         void BuildLogScroll()
         {
             var scrollGo = new GameObject("LogScroll", typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
             scrollGo.transform.SetParent(_window.transform, false);
-            var scrollRt = (RectTransform)scrollGo.transform;
-            scrollRt.anchorMin = new Vector2(0f, 0f);
-            scrollRt.anchorMax = new Vector2(1f, 1f);
-            // Stretch to fill the window minus title bar (top) and input row (bottom).
-            scrollRt.offsetMin = new Vector2(PADDING + 2f, InputRowHeight + PADDING);
-            scrollRt.offsetMax = new Vector2(-(PADDING + 2f), -(TitleBarHeight + 4f));
+            _scrollRt = (RectTransform)scrollGo.transform;
+            _scrollRt.anchorMin = new Vector2(0f, 0f);
+            _scrollRt.anchorMax = new Vector2(1f, 1f);
             scrollGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
             _scroll = scrollGo.GetComponent<ScrollRect>();
             _scroll.horizontal = false;
             _scroll.vertical = true;
             _scroll.movementType = ScrollRect.MovementType.Clamped;
-            _scroll.viewport = scrollRt;
+            _scroll.scrollSensitivity = 24f;
+            _scroll.viewport = _scrollRt;
+            ApplyLogScrollOffsets();
 
-            var logTextGo = new GameObject("LogText", typeof(RectTransform));
-            logTextGo.transform.SetParent(scrollGo.transform, false);
-            _logText = logTextGo.AddComponent<TextMeshProUGUI>();
-            _logText.font = TMP_Settings.defaultFontAsset;
-            _logText.fontSize = DevConsoleSettings.FontSize;
-            _logText.textWrappingMode = TextWrappingModes.Normal;
-            _logText.richText = true;
-            _logText.color = Theme.TextPrimary;
-            _logText.alignment = TextAlignmentOptions.TopLeft;
-            _logText.raycastTarget = false;
-            _logText.lineSpacing = 4f; // breathing room between log lines
-            var logTextRt = _logText.rectTransform;
-            logTextRt.anchorMin = new Vector2(0f, 1f);
-            logTextRt.anchorMax = new Vector2(1f, 1f);
-            logTextRt.pivot     = new Vector2(0f, 1f);
-            logTextRt.anchoredPosition = Vector2.zero;
-            logTextRt.sizeDelta = Vector2.zero;
-            var fitter = logTextGo.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
-            _scroll.content = logTextRt;
+            // Content: an empty rect the virtualized view sizes to the summed row heights.
+            // Pooled rows are its children, manually positioned — no layout groups (deliberate).
+            var contentGo = new GameObject("LogContent", typeof(RectTransform));
+            contentGo.transform.SetParent(scrollGo.transform, false);
+            var contentRt = (RectTransform)contentGo.transform;
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot     = new Vector2(0f, 1f);
+            contentRt.anchoredPosition = Vector2.zero;
+            contentRt.sizeDelta = Vector2.zero;
+            _scroll.content = contentRt;
+
+            // Thin scrollbar — the affordance the old console lacked entirely. AutoHide (not
+            // AutoHideAndExpandViewport) so its appearance never reflows the content width.
+            var scrollbarGo = new GameObject("Scrollbar", typeof(Image), typeof(Scrollbar));
+            scrollbarGo.transform.SetParent(scrollGo.transform, false);
+            var scrollbarRt = (RectTransform)scrollbarGo.transform;
+            scrollbarRt.anchorMin = new Vector2(1f, 0f);
+            scrollbarRt.anchorMax = new Vector2(1f, 1f);
+            scrollbarRt.pivot     = new Vector2(1f, 0.5f);
+            scrollbarRt.anchoredPosition = new Vector2(-1f, 0f);
+            scrollbarRt.sizeDelta = new Vector2(4f, -4f);
+            scrollbarGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.03f);
+            var scrollbar = scrollbarGo.GetComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+            var handleGo = new GameObject("Handle", typeof(Image));
+            handleGo.transform.SetParent(scrollbarGo.transform, false);
+            var handleRt = (RectTransform)handleGo.transform;
+            handleRt.anchorMin = Vector2.zero;
+            handleRt.anchorMax = Vector2.one;
+            handleRt.offsetMin = Vector2.zero;
+            handleRt.offsetMax = Vector2.zero;
+            var handleImg = handleGo.GetComponent<Image>();
+            handleImg.sprite = Theme.Rounded;
+            handleImg.type = Image.Type.Sliced;
+            handleImg.pixelsPerUnitMultiplier = 8f; // tiny radius at 4px width
+            handleImg.color = new Color(1f, 1f, 1f, 0.14f);
+            scrollbar.targetGraphic = handleImg;
+            scrollbar.handleRect = handleRt;
+            _scroll.verticalScrollbar = scrollbar;
+            _scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
+            // Hidden measurer TMP — same font settings as the pooled rows; used only for
+            // GetPreferredValues so heights are measured without touching a live row.
+            var measurerGo = new GameObject("Measurer", typeof(RectTransform));
+            measurerGo.transform.SetParent(scrollGo.transform, false);
+            var measurer = measurerGo.AddComponent<TextMeshProUGUI>();
+            measurer.font = Theme.Font;
+            measurer.fontSize = DevConsoleSettings.FontSize;
+            measurer.richText = true;
+            measurer.textWrappingMode = TextWrappingModes.Normal;
+            measurer.raycastTarget = false;
+            measurerGo.SetActive(false);
+
+            _logView = new ConsoleLogView(_console, _scroll, _scrollRt, contentRt, measurer, () => Theme.Font);
+
+            BuildJumpPill();
+        }
+
+        // Floating "N new" button, bottom-right above the input row. Appears when new lines
+        // arrive while the user is scrolled up reading history; click jumps back to live tail.
+        void BuildJumpPill()
+        {
+            _jumpPill = new GameObject("JumpPill", typeof(Image), typeof(Button));
+            _jumpPill.transform.SetParent(_window.transform, false);
+            var pillRt = (RectTransform)_jumpPill.transform;
+            pillRt.anchorMin = new Vector2(1f, 0f);
+            pillRt.anchorMax = new Vector2(1f, 0f);
+            pillRt.pivot     = new Vector2(1f, 0f);
+            pillRt.anchoredPosition = new Vector2(-(PADDING + 10f), InputRowHeight + PADDING + 8f);
+            pillRt.sizeDelta = new Vector2(84f, DevConsoleSettings.FontSize + 12f);
+            var pillImg = _jumpPill.GetComponent<Image>();
+            pillImg.sprite = Theme.Rounded;
+            pillImg.type = Image.Type.Sliced;
+            pillImg.pixelsPerUnitMultiplier = 1.5f;
+            pillImg.color = Color.white; // tinted by the ColorBlock
+            var pillBtn = _jumpPill.GetComponent<Button>();
+            pillBtn.transition = Selectable.Transition.ColorTint;
+            pillBtn.colors = new ColorBlock
+            {
+                normalColor      = Theme.BgHover,
+                highlightedColor = Color.Lerp(Theme.BgHover, Theme.Accent, 0.25f),
+                pressedColor     = Color.Lerp(Theme.BgHover, Theme.Accent, 0.45f),
+                selectedColor    = Theme.BgHover,
+                disabledColor    = Theme.BgHover,
+                colorMultiplier  = 1f,
+                fadeDuration     = 0.08f,
+            };
+            pillBtn.navigation = new Navigation { mode = Navigation.Mode.None };
+            pillBtn.onClick.AddListener(() => _logView?.ScrollToBottom());
+
+            var labelGo = new GameObject("Label", typeof(RectTransform));
+            labelGo.transform.SetParent(_jumpPill.transform, false);
+            _jumpPillLabel = labelGo.AddComponent<TextMeshProUGUI>();
+            _jumpPillLabel.font = Theme.Font;
+            _jumpPillLabel.fontSize = DevConsoleSettings.FontSize - 2;
+            _jumpPillLabel.fontStyle = FontStyles.Bold;
+            _jumpPillLabel.color = Theme.Accent;
+            _jumpPillLabel.alignment = TextAlignmentOptions.Center;
+            _jumpPillLabel.raycastTarget = false;
+            var labelRt = _jumpPillLabel.rectTransform;
+            labelRt.anchorMin = Vector2.zero;
+            labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = Vector2.zero;
+            labelRt.offsetMax = Vector2.zero;
+
+            _jumpPill.SetActive(false);
         }
 
         void BuildInputRow()
@@ -984,6 +1361,7 @@ namespace TeekayUtils.DevConsole.UI
             inputBg.type = Image.Type.Sliced;
             inputBg.pixelsPerUnitMultiplier = 1.5f;
             inputBg.color = Theme.BgElevated;
+            _inputBg = inputBg; // error flash tints this card
 
             // Decorative chevron — purely visual. raycastTarget=false so it never steals clicks
             // away from the input field beneath it.
@@ -996,7 +1374,7 @@ namespace TeekayUtils.DevConsole.UI
             chevronRt.anchoredPosition = Vector2.zero;
             chevronRt.sizeDelta = new Vector2(LeftTextPad, 0f);
             var chevron = chevronGo.AddComponent<TextMeshProUGUI>();
-            chevron.font = TMP_Settings.defaultFontAsset;
+            chevron.font = Theme.Font;
             chevron.fontSize = DevConsoleSettings.FontSize + 2;
             chevron.color = Theme.AccentMuted;
             chevron.text = "›";
@@ -1025,19 +1403,23 @@ namespace TeekayUtils.DevConsole.UI
             var ghostGo = new GameObject("GhostText", typeof(RectTransform));
             ghostGo.transform.SetParent(viewportGo.transform, false);
             _ghostText = ghostGo.AddComponent<TextMeshProUGUI>();
-            _ghostText.font = TMP_Settings.defaultFontAsset;
+            _ghostText.font = Theme.Font;
             _ghostText.fontSize = DevConsoleSettings.FontSize;
             _ghostText.color = Color.white;
             _ghostText.textWrappingMode = TextWrappingModes.NoWrap;
             _ghostText.richText = true;
             _ghostText.raycastTarget = false;
             _ghostText.margin = Vector4.zero;
-            _ghostText.alignment = TextAlignmentOptions.MidlineLeft;
-            var ghostRt = _ghostText.rectTransform;
-            ghostRt.anchorMin = Vector2.zero;
-            ghostRt.anchorMax = Vector2.one;
-            ghostRt.offsetMin = Vector2.zero;
-            ghostRt.offsetMax = Vector2.zero;
+            // Left (= Middle vertically), NOT MidlineLeft (= Geometry). Geometry centres on the
+            // rendered glyphs' bounding box, so a string with a descender sits at a different
+            // height than one without — two texts showing different content can never line up.
+            // Middle centres on the font's ascender/descender, which is identical for any string
+            // in this font and size. See BuildInputRow for the matching setting on the typed text.
+            _ghostText.alignment = TextAlignmentOptions.Left;
+            // Rect is owned by UpdateGhostPosition, which copies it from the input's own text
+            // component every frame — the values here only matter before the first update.
+            _ghostRt = _ghostText.rectTransform;
+            StretchToFill(_ghostRt);
             ghostGo.transform.SetAsFirstSibling(); // draw BEHIND the input's own text
 
             // Input's own text component (drawn on top of the ghost). TMP_InputField will
@@ -1045,12 +1427,16 @@ namespace TeekayUtils.DevConsole.UI
             var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(viewportGo.transform, false);
             var inputText = textGo.AddComponent<TextMeshProUGUI>();
-            inputText.font = TMP_Settings.defaultFontAsset;
+            _inputTextComponent = inputText;
+            inputText.font = Theme.Font;
             inputText.fontSize = DevConsoleSettings.FontSize;
             inputText.color = Theme.TextPrimary;
             inputText.textWrappingMode = TextWrappingModes.NoWrap;
             inputText.margin = Vector4.zero;
-            inputText.alignment = TextAlignmentOptions.MidlineLeft;
+            // Must match the ghost's alignment — and Middle rather than Geometry for the reason
+            // documented there. As a bonus this stops the typed text drifting vertically as you
+            // type: Geometry re-centres the line the moment a descender ("p", "g") appears.
+            inputText.alignment = TextAlignmentOptions.Left;
             var inputTextRt = inputText.rectTransform;
             inputTextRt.anchorMin = Vector2.zero;
             inputTextRt.anchorMax = Vector2.one;
@@ -1059,7 +1445,7 @@ namespace TeekayUtils.DevConsole.UI
 
             _input.textViewport   = viewportRt;
             _input.textComponent  = inputText;
-            _input.fontAsset      = TMP_Settings.defaultFontAsset;
+            _input.fontAsset      = Theme.Font;
             _input.pointSize      = DevConsoleSettings.FontSize;
             _input.lineType       = TMP_InputField.LineType.SingleLine;
             _input.richText       = false;
@@ -1130,7 +1516,7 @@ namespace TeekayUtils.DevConsole.UI
             var runLabelGo = new GameObject("Label", typeof(RectTransform));
             runLabelGo.transform.SetParent(runGo.transform, false);
             var runLabel = runLabelGo.AddComponent<TextMeshProUGUI>();
-            runLabel.font = TMP_Settings.defaultFontAsset;
+            runLabel.font = Theme.Font;
             runLabel.fontStyle = FontStyles.Bold;
             runLabel.color = Theme.Accent;
             runLabel.text = "Run"; // ASCII — guaranteed in the default TMP font (a ▶ glyph is not)
@@ -1147,6 +1533,214 @@ namespace TeekayUtils.DevConsole.UI
             runLabelRt.anchorMax = Vector2.one;
             runLabelRt.offsetMin = new Vector2(4f, 0f);  // small horizontal breathing room so
             runLabelRt.offsetMax = new Vector2(-4f, 0f); // auto-size has padding to fit within
+        }
+
+        /// <summary>
+        /// Filter row (hidden by default, toggled from the toolbar): a search box that narrows
+        /// the log to matching lines, plus one chip per registered category to show/hide it.
+        /// Chips drive the same enabled flag as the <c>log_filter</c> command.
+        /// </summary>
+        void BuildFilterRow()
+        {
+            _filterRow = new GameObject("FilterRow", typeof(Image));
+            _filterRow.transform.SetParent(_window.transform, false);
+            var rowRt = (RectTransform)_filterRow.transform;
+            rowRt.anchorMin = new Vector2(0f, 1f);
+            rowRt.anchorMax = new Vector2(1f, 1f);
+            rowRt.pivot     = new Vector2(0f, 1f);
+            rowRt.anchoredPosition = new Vector2(PADDING, -(TitleBarHeight + 2f));
+            rowRt.sizeDelta = new Vector2(-PADDING * 2f, FilterRowHeight);
+            var rowImg = _filterRow.GetComponent<Image>();
+            rowImg.sprite = Theme.Rounded;
+            rowImg.type = Image.Type.Sliced;
+            rowImg.pixelsPerUnitMultiplier = 1.5f;
+            rowImg.color = Theme.BgElevated;
+
+            // Search box — a darker inset card, pinned to the row's first line so it keeps its
+            // height when the chips wrap the row taller.
+            var searchGo = new GameObject("Search", typeof(Image));
+            searchGo.transform.SetParent(_filterRow.transform, false);
+            var searchRt = (RectTransform)searchGo.transform;
+            searchRt.anchorMin = new Vector2(0f, 1f);
+            searchRt.anchorMax = new Vector2(0f, 1f);
+            searchRt.pivot     = new Vector2(0f, 1f);
+            searchRt.anchoredPosition = new Vector2(5f, -CHIP_GAP);
+            searchRt.sizeDelta = new Vector2(SEARCH_WIDTH, ChipHeight);
+            var searchBg = searchGo.GetComponent<Image>();
+            searchBg.sprite = Theme.Rounded;
+            searchBg.type = Image.Type.Sliced;
+            searchBg.pixelsPerUnitMultiplier = 1.5f;
+            searchBg.color = Theme.BgWindow;
+
+            var searchViewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+            searchViewportGo.transform.SetParent(searchGo.transform, false);
+            var searchViewportRt = (RectTransform)searchViewportGo.transform;
+            searchViewportRt.anchorMin = Vector2.zero;
+            searchViewportRt.anchorMax = Vector2.one;
+            searchViewportRt.offsetMin = new Vector2(8f, 1f);
+            searchViewportRt.offsetMax = new Vector2(-8f, -1f);
+
+            var searchTextGo = new GameObject("Text", typeof(RectTransform));
+            searchTextGo.transform.SetParent(searchViewportGo.transform, false);
+            var searchText = searchTextGo.AddComponent<TextMeshProUGUI>();
+            searchText.font = Theme.Font;
+            searchText.fontSize = DevConsoleSettings.FontSize - 2;
+            searchText.color = Theme.TextPrimary;
+            searchText.textWrappingMode = TextWrappingModes.NoWrap;
+            searchText.alignment = TextAlignmentOptions.Left;
+            StretchToFill(searchText.rectTransform);
+
+            var placeholderGo = new GameObject("Placeholder", typeof(RectTransform));
+            placeholderGo.transform.SetParent(searchViewportGo.transform, false);
+            var placeholder = placeholderGo.AddComponent<TextMeshProUGUI>();
+            placeholder.font = Theme.Font;
+            placeholder.fontSize = DevConsoleSettings.FontSize - 2;
+            placeholder.fontStyle = FontStyles.Italic;
+            placeholder.color = Theme.TextSubtle;
+            placeholder.text = "search";
+            placeholder.textWrappingMode = TextWrappingModes.NoWrap;
+            placeholder.alignment = TextAlignmentOptions.Left;
+            placeholder.raycastTarget = false;
+            StretchToFill(placeholder.rectTransform);
+
+            _searchInput = searchGo.AddComponent<TMP_InputField>();
+            _searchInput.textViewport  = searchViewportRt;
+            _searchInput.textComponent = searchText;
+            _searchInput.placeholder   = placeholder;
+            _searchInput.fontAsset     = Theme.Font;
+            _searchInput.pointSize     = DevConsoleSettings.FontSize - 2;
+            _searchInput.lineType      = TMP_InputField.LineType.SingleLine;
+            _searchInput.richText      = false;
+            _searchInput.caretColor    = Theme.Accent;
+            _searchInput.customCaretColor = true;
+            _searchInput.caretWidth    = 2;
+            _searchInput.selectionColor = Theme.AccentSoft;
+            _searchInput.navigation = new Navigation { mode = Navigation.Mode.None };
+            _searchInput.onValueChanged.AddListener(v => _logView?.SetSearch(v));
+
+            // Chip strip — everything right of the search box. Chips WRAP inside it rather than
+            // scrolling: a filter you can't see is a filter you won't use. RectMask2D is only a
+            // backstop for the degenerate case of one category name wider than the whole row.
+            var stripGo = new GameObject("Chips", typeof(RectTransform), typeof(RectMask2D));
+            stripGo.transform.SetParent(_filterRow.transform, false);
+            _filterChipStrip = (RectTransform)stripGo.transform;
+            _filterChipStrip.anchorMin = new Vector2(0f, 0f);
+            _filterChipStrip.anchorMax = new Vector2(1f, 1f);
+            _filterChipStrip.offsetMin = new Vector2(SEARCH_WIDTH + 12f, 0f);
+            _filterChipStrip.offsetMax = new Vector2(-5f, 0f);
+
+            _filterRow.SetActive(false);
+        }
+
+        static void StretchToFill(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>
+        /// Rebuild the category chip widgets from the live registry. Called when the filter row is
+        /// shown, so categories registered since the last look appear (syncing while hidden would
+        /// be wasted work). Creating widgets is separate from placing them — a window resize needs
+        /// to re-place chips every drag frame, and destroying/recreating GameObjects that often is
+        /// exactly the churn to avoid.
+        /// </summary>
+        void RebuildFilterChips()
+        {
+            if (_filterChipStrip == null) return;
+            for (int i = _filterChipStrip.childCount - 1; i >= 0; i--)
+                Destroy(_filterChipStrip.GetChild(i).gameObject);
+            _filterChips.Clear();
+
+            foreach (ConsoleLogCategory category in DevConsole.Registry.AllCategories())
+            {
+                ConsoleLogCategory cat = category; // capture per-iteration for the closures below
+
+                var chipGo = new GameObject($"Chip_{cat.name}", typeof(Image), typeof(Button));
+                chipGo.transform.SetParent(_filterChipStrip, false);
+
+                var label = new GameObject("Label", typeof(RectTransform)).AddComponent<TextMeshProUGUI>();
+                label.transform.SetParent(chipGo.transform, false);
+                label.font = Theme.Font;
+                label.fontSize = Mathf.Max(9f, DevConsoleSettings.FontSize - 3);
+                label.text = cat.name;
+                label.alignment = TextAlignmentOptions.Center;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.raycastTarget = false;
+                StretchToFill(label.rectTransform);
+
+                // Chips stack from the strip's top-left; LayoutFilterChips assigns the positions.
+                var chipRt = (RectTransform)chipGo.transform;
+                chipRt.anchorMin = new Vector2(0f, 1f);
+                chipRt.anchorMax = new Vector2(0f, 1f);
+                chipRt.pivot     = new Vector2(0f, 1f);
+
+                var chipImg = chipGo.GetComponent<Image>();
+                chipImg.sprite = Theme.Rounded;
+                chipImg.type = Image.Type.Sliced;
+                chipImg.pixelsPerUnitMultiplier = 1.5f;
+
+                void Style()
+                {
+                    Color c = cat.color;
+                    chipImg.color = cat.enabled ? new Color(c.r, c.g, c.b, 0.16f)
+                                                : new Color(1f, 1f, 1f, 0.04f);
+                    label.color = cat.enabled ? cat.color : Theme.TextSubtle;
+                }
+                Style();
+
+                var btn = chipGo.GetComponent<Button>();
+                btn.transition = Selectable.Transition.None; // enabled/disabled style IS the state
+                btn.navigation = new Navigation { mode = Navigation.Mode.None };
+                btn.onClick.AddListener(() =>
+                {
+                    // Same flag log_filter drives: hides existing lines AND drops future appends.
+                    cat.enabled = !cat.enabled;
+                    Style();
+                    _logView?.NotifyFilterChanged();
+                });
+
+                _filterChips.Add((chipRt, label.GetPreferredValues(cat.name).x + 18f));
+            }
+
+            LayoutFilterChips();
+        }
+
+        /// <summary>
+        /// Place the chips, wrapping onto new lines when they run out of width, and grow the
+        /// filter row to fit however many lines that took. Cheap enough to re-run while dragging
+        /// a resize handle.
+        /// </summary>
+        void LayoutFilterChips()
+        {
+            if (_filterChipStrip == null || _filterRow == null) return;
+
+            float available = ChipStripWidth;
+            float x = 0f;
+            float y = -CHIP_GAP;
+            int lines = 1;
+
+            foreach ((RectTransform rt, float width) chip in _filterChips)
+            {
+                // Never wrap a chip that is alone on its line — it would loop forever on a window
+                // narrower than a single category name. RectMask2D clips that case instead.
+                if (x > 0f && x + chip.width > available)
+                {
+                    x = 0f;
+                    y -= ChipHeight + CHIP_GAP;
+                    lines++;
+                }
+                chip.rt.anchoredPosition = new Vector2(x, y);
+                chip.rt.sizeDelta = new Vector2(chip.width, ChipHeight);
+                x += chip.width + CHIP_GAP;
+            }
+
+            _filterChipLines = lines;
+            _lastChipLayoutWidth = _windowSize.x;
+            ((RectTransform)_filterRow.transform).sizeDelta = new Vector2(-PADDING * 2f, FilterRowHeight);
+            ApplyLogScrollOffsets();
         }
 
         /// <summary>
@@ -1214,6 +1808,8 @@ namespace TeekayUtils.DevConsole.UI
                 var rowClick = rowGo.AddComponent<ConsoleSuggestionRow>();
                 rowClick.VisualIndex = i;
                 rowClick.Clicked = AcceptSuggestionRow;
+                rowClick.HoverChanged = RefreshSuggestionRows;
+                _suggestionRowHandlers[i] = rowClick;
 
                 // Left accent stripe — visible only when this row is selected. Sized to inset
                 // slightly so it doesn't clip with the panel's rounded corners.
@@ -1234,12 +1830,12 @@ namespace TeekayUtils.DevConsole.UI
                 var textGo = new GameObject("Text", typeof(RectTransform));
                 textGo.transform.SetParent(rowGo.transform, false);
                 var text = textGo.AddComponent<TextMeshProUGUI>();
-                text.font = TMP_Settings.defaultFontAsset;
+                text.font = Theme.Font;
                 text.fontSize = DevConsoleSettings.FontSize;
                 text.color = Theme.TextPrimary;
                 text.textWrappingMode = TextWrappingModes.NoWrap;
                 text.richText = true;
-                text.alignment = TextAlignmentOptions.MidlineLeft;
+                text.alignment = TextAlignmentOptions.Left;
                 text.raycastTarget = false;
                 text.overflowMode = TextOverflowModes.Ellipsis;
                 var textRt = text.rectTransform;
