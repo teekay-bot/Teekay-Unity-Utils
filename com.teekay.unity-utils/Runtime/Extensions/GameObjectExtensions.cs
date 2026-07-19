@@ -57,20 +57,21 @@ namespace TeekayUtils
         }
 
         /// <summary>
-        /// Hierarchy path of the GameObject's PARENT, e.g. "/Root/Enemies".
-        /// Returns "/" for root objects. Works on inactive objects.
+        /// Hierarchy path of the GameObject's PARENT, e.g. "/Root/Enemies" for an object named
+        /// "Goblin" under "/Root/Enemies". Returns "/" for root objects. Works on inactive objects.
+        /// <para>Use <see cref="FullPath"/> for the path including this object.</para>
         /// </summary>
-        public static string Path(this GameObject gameObject)
+        public static string ParentPath(this GameObject gameObject)
         {
             Transform parent = gameObject.transform.parent;
-            return parent == null ? "/" : parent.gameObject.PathFull();
+            return parent == null ? "/" : parent.gameObject.FullPath();
         }
 
         /// <summary>
         /// Full hierarchy path including the GameObject itself,
         /// e.g. "/Root/Enemies/Goblin". Works on inactive objects.
         /// </summary>
-        public static string PathFull(this GameObject gameObject)
+        public static string FullPath(this GameObject gameObject)
         {
             return "/" + string.Join("/",
                 gameObject.GetComponentsInParent<Transform>(true).Select(t => t.name).Reverse());

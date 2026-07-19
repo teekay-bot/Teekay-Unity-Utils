@@ -124,7 +124,7 @@ namespace TeekayUtils.Tests
         }
 
         [Test]
-        public void PathFull_And_Path_BuildHierarchyPaths()
+        public void FullPath_And_ParentPath_BuildHierarchyPaths()
         {
             var root = Spawn("Root");
             var mid = new GameObject("Mid");
@@ -132,9 +132,9 @@ namespace TeekayUtils.Tests
             var leaf = new GameObject("Leaf");
             leaf.transform.SetParent(mid.transform);
 
-            Assert.That(leaf.PathFull(), Is.EqualTo("/Root/Mid/Leaf"));
-            Assert.That(leaf.Path(), Is.EqualTo("/Root/Mid"));
-            Assert.That(root.Path(), Is.EqualTo("/"));
+            Assert.That(leaf.FullPath(), Is.EqualTo("/Root/Mid/Leaf"));
+            Assert.That(leaf.ParentPath(), Is.EqualTo("/Root/Mid"));
+            Assert.That(root.ParentPath(), Is.EqualTo("/"));
         }
 
         [Test]
