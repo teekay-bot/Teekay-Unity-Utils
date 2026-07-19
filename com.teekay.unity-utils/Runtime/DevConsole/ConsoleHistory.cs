@@ -28,7 +28,7 @@ namespace TeekayUtils.DevConsole
             _navIndex = -1;
         }
 
-        /// <summary>Step toward older entries. Returns "" when stepping past the newest live line.</summary>
+        /// <summary>Step toward older entries. Returns null when there is no history; stops at the oldest entry.</summary>
         public string NavigatePrevious()
         {
             if (_entries.Count == 0) return null;
