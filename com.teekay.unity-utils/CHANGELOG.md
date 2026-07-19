@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-07-19
+
+### Added
+
+- **`[SubclassSelector]`** — a type dropdown for `[SerializeReference]` fields, so which
+  implementation a field holds becomes an authoring choice instead of a code one. The picked
+  instance's own serialized fields are drawn underneath it, and a newly written implementation
+  appears in the dropdown just by existing — there is no registry to keep in sync.
+
+  Unity serializes managed references but ships **no** type picker for them, so without a drawer a
+  `[SerializeReference]` field can only ever be assigned from code. Verified against 6000.3.19f1:
+  the serialization API is all present (`ManagedReferenceUtility`, `managedReferenceValue`,
+  `isPropertyTypeAManagedReference`) but nothing in the Inspector selects a type.
+
+  ```csharp
+  [SerializeReference, SubclassSelector] IDamageModifier _modifier = new FlatDamage();
+  ```
+
+  The dropdown offers a type only when Unity could actually store it — concrete, not a
+  `UnityEngine.Object`, not a value type, `[Serializable]`, public parameterless constructor. Types
+  that fail any of those would serialize as null, so offering them would be a trap rather than a
+  convenience. Colliding short names are disambiguated by namespace, because `GenericMenu` silently
+  merges entries whose labels match.
+
+  Type discovery and naming live in `SubclassSelectorTypes` (editor, public) separately from the
+  drawer, so they are unit-testable without IMGUI — 14 EditMode tests. The attribute itself is a
+  pure marker in the runtime assembly and costs a build nothing.
+
 ## [3.0.0] - 2026-07-19
 
 An API consistency pass. Every change is small, and every one of them is breaking — hence the major
