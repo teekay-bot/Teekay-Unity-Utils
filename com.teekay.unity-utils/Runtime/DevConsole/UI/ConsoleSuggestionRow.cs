@@ -16,7 +16,7 @@ namespace TeekayUtils.DevConsole.UI
     /// field selected after the tap.
     /// </summary>
     [RequireComponent(typeof(Graphic))]
-    public sealed class ConsoleSuggestionRow : MonoBehaviour, IPointerClickHandler,
+    internal sealed class ConsoleSuggestionRow : MonoBehaviour, IPointerClickHandler,
         IPointerEnterHandler, IPointerExitHandler
     {
         /// <summary>Index of this row within the visible window (0..MAX_VISIBLE-1), not the match index.</summary>

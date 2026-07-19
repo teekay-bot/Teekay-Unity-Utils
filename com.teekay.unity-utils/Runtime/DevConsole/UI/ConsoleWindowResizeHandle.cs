@@ -9,7 +9,7 @@ namespace TeekayUtils.DevConsole.UI
     /// handle drags — single edge for the 4 sides, two flags for the 4 corners. ConsoleUI
     /// applies the delta correctly per edge so opposite _edges stay anchored when sized.
     /// </summary>
-    public sealed class ConsoleWindowResizeHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
+    internal sealed class ConsoleWindowResizeHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         [SerializeField] internal ConsoleUI _owner;
         [SerializeField] internal ResizeEdges _edges = ResizeEdges.None;
@@ -24,7 +24,7 @@ namespace TeekayUtils.DevConsole.UI
     }
 
     [Flags]
-    public enum ResizeEdges
+    internal enum ResizeEdges
     {
         None   = 0,
         Top    = 1 << 0,

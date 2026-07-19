@@ -65,12 +65,12 @@ namespace TeekayUtils.DevConsole
         public static bool IsFocused => HasInstance && instance._isFocused;
 
         /// <summary>Fires whenever a new log entry is appended (UI subscribes to repaint).</summary>
-        public event Action<ConsoleLogEntry> OnLogAppended;
+        public static event Action<ConsoleLogEntry> OnLogAppended;
         /// <summary>Fires when the log buffer is cleared.</summary>
-        public event Action OnLogCleared;
+        public static event Action OnLogCleared;
         /// <summary>Fires when an executed command line fails (unknown name, bad CVar value, or a
         /// throwing handler). The UI uses it for an error flash on the input row.</summary>
-        internal event Action OnExecuteFailed;
+        internal static event Action OnExecuteFailed;
         /// <summary>
         /// Fires whenever the console opens or closes (true = opened). Use for things tied
         /// to "is the panel visible" (e.g., show/hide other HUD elements). For input blocking
@@ -85,6 +85,26 @@ namespace TeekayUtils.DevConsole
         /// game resumes. Console can stay open as a live log monitor without pausing.
         /// </summary>
         public static event Action<bool> OnFocusChanged;
+
+        /// <summary>
+        /// Clears every static event before a new play session starts.
+        /// <para>
+        /// Static events outlive the objects that subscribed to them. With "Enter Play Mode
+        /// without domain reload" enabled, handlers registered by the previous session survive
+        /// into the next one and fire against destroyed objects — a leak that grows with every
+        /// press of Play. Unity runs this at <c>SubsystemRegistration</c>, before any Awake, so
+        /// each session starts with an empty list.
+        /// </para>
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStaticEvents()
+        {
+            OnLogAppended = null;
+            OnLogCleared = null;
+            OnExecuteFailed = null;
+            OnVisibilityChanged = null;
+            OnFocusChanged = null;
+        }
 
         // ─────────────────────────────────────────────────────────────────────
         //  Initialization

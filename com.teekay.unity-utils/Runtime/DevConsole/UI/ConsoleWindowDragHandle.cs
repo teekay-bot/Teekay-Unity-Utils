@@ -8,7 +8,7 @@ namespace TeekayUtils.DevConsole.UI
     /// screen pixels back to <see cref="ConsoleUI"/>, which clamps and applies them. Stateless
     /// itself — all window state lives on ConsoleUI so dragging and resizing share one source.
     /// </summary>
-    public sealed class ConsoleWindowDragHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
+    internal sealed class ConsoleWindowDragHandle : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         [SerializeField] internal ConsoleUI _owner;
 

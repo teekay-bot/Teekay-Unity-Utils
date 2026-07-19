@@ -21,7 +21,7 @@ namespace TeekayUtils.DevConsole.UI
     ///       └── ResizeHandle (bottom-right corner grip)
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class ConsoleUI : MonoBehaviour
+    internal sealed class ConsoleUI : MonoBehaviour
     {
         // ─────────────────────────────────────────────────────────────────────
         //  Window geometry (in-session memory — reset to defaults on play start)
@@ -212,9 +212,9 @@ namespace TeekayUtils.DevConsole.UI
         {
             _console = console;
             _touchMode = Application.isMobilePlatform;
-            _console.OnLogAppended += OnLogAppended;
-            _console.OnLogCleared  += OnLogCleared;
-            _console.OnExecuteFailed += OnExecuteFailed;
+            DevConsole.OnLogAppended += OnLogAppended;
+            DevConsole.OnLogCleared  += OnLogCleared;
+            DevConsole.OnExecuteFailed += OnExecuteFailed;
             EnsureBuilt();
         }
 
@@ -222,9 +222,9 @@ namespace TeekayUtils.DevConsole.UI
         {
             if (_console != null)
             {
-                _console.OnLogAppended -= OnLogAppended;
-                _console.OnLogCleared  -= OnLogCleared;
-                _console.OnExecuteFailed -= OnExecuteFailed;
+                DevConsole.OnLogAppended -= OnLogAppended;
+                DevConsole.OnLogCleared  -= OnLogCleared;
+                DevConsole.OnExecuteFailed -= OnExecuteFailed;
             }
             if (_input != null)
             {
