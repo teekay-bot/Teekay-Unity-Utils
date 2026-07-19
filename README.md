@@ -52,7 +52,7 @@ Drop the `#v3.0.0` suffix to track the latest commit instead of a release. The `
 | [EventBus](com.teekay.unity-utils/Documentation~/EventBus.md) | Type-keyed pub/sub with zero-alloc publish. |
 | [DebugDraw](com.teekay.unity-utils/Documentation~/DebugDraw.md) | One drawing API, rendering in the Scene view **and** in builds under any pipeline. |
 | [DevConsole](com.teekay.unity-utils/Documentation~/DevConsole.md) | In-game console: commands, CVars, autocomplete, bindings, log capture. |
-| [Attributes](com.teekay.unity-utils/Documentation~/Attributes.md) | `[KeyPicker]` click-to-listen key capture. |
+| [Attributes](com.teekay.unity-utils/Documentation~/Attributes.md) | `[KeyPicker]` click-to-listen key capture, `[SubclassSelector]` type dropdown for `[SerializeReference]` fields. |
 
 Start with the [package README](com.teekay.unity-utils/README.md) for a quick tour of every module.
 

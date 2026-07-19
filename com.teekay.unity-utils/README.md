@@ -22,7 +22,7 @@ developer console. Small, tested, zero prefabs — everything is plain code.
 | **EventBus** | Type-keyed pub/sub for gameplay intents. Struct events, zero-alloc publish, one throwing listener never stops the rest. | [EventBus](Documentation~/EventBus.md) |
 | **DebugDraw** | One drawing API, two backends: Gizmos (Scene view) and GL lines (Game view + builds, Built-in **and** URP/HDRP). Spheres, domes, capsules, perception cones, circles, cubes, rays, arrows. | [DebugDraw](Documentation~/DebugDraw.md) |
 | **DevConsole** | Drop-in developer console (F12): commands, typed CVars, autocomplete, history, key bindings, Unity log capture, virtualized log with duplicate collapsing and filtering. Off in release builds by default. | [DevConsole](Documentation~/DevConsole.md) |
-| **Attributes** | `[KeyPicker]` — click-to-listen key capture instead of a 100-entry enum dropdown. | [Attributes](Documentation~/Attributes.md) |
+| **Attributes** | `[KeyPicker]` — click-to-listen key capture instead of a 100-entry enum dropdown. `[SubclassSelector]` — type dropdown for `[SerializeReference]` fields, which Unity otherwise leaves assignable only from code. | [Attributes](Documentation~/Attributes.md) |
 
 ---
 
