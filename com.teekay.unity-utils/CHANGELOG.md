@@ -4,6 +4,22 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-07-20
+
+### Fixed
+
+- **`[SubclassSelector]`: the type could not be changed once the chosen type had fields of its
+  own.** The header's foldout was given the full-width row, and `EditorGUI.Foldout` with
+  `toggleOnLabelClick` consumes mouse events across the *entire* rect it is handed — so it
+  swallowed every click aimed at the type dropdown sharing that row. Picking a type with no
+  serialized fields left the field editable (no children, so no foldout was drawn); picking one
+  with fields made the dropdown permanently unresponsive. The foldout is now confined to the label
+  column, leaving the value column to the dropdown.
+- **`[SubclassSelector]`: menu callbacks held a `SerializedProperty` past the end of `OnGUI`.**
+  `GenericMenu` invokes its callbacks after the GUI pass has returned, at which point a retained
+  `SerializedProperty` is no longer valid to use. The chosen type is now applied by re-resolving
+  the property from its path on the `SerializedObject`.
+
 ## [3.1.0] - 2026-07-19
 
 ### Added

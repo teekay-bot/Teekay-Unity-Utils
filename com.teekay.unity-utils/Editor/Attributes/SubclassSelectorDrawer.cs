@@ -61,21 +61,26 @@ namespace TeekayUtils.EditorTools
 
         static void DrawHeader(Rect rect, SerializedProperty property, GUIContent label)
         {
-            // Only foldout when there is something to fold out to; a parameterless gesture would
-            // otherwise offer an arrow that reveals nothing.
-            bool hasChildren = HasVisibleChildren(property);
-            if (hasChildren)
+            var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
+            var buttonRect = new Rect(rect.x + EditorGUIUtility.labelWidth, rect.y,
+                                      Mathf.Max(0f, rect.width - EditorGUIUtility.labelWidth), rect.height);
+
+            // Confined to the label column on purpose: a Foldout with toggleOnLabelClick swallows
+            // mouse events across the WHOLE rect it is handed, so a full-width one would eat every
+            // click meant for the dropdown — leaving the type unchangeable the moment the chosen
+            // type has fields to fold out to.
+            //
+            // Only foldout when there is something to reveal; a parameterless implementation would
+            // otherwise offer an arrow that opens onto nothing.
+            if (HasVisibleChildren(property))
             {
-                property.isExpanded = EditorGUI.Foldout(rect, property.isExpanded, label, true);
+                property.isExpanded = EditorGUI.Foldout(labelRect, property.isExpanded, label, true);
             }
             else
             {
                 property.isExpanded = false;
-                EditorGUI.LabelField(rect, label);
+                EditorGUI.LabelField(labelRect, label);
             }
-
-            var buttonRect = new Rect(rect.x + EditorGUIUtility.labelWidth, rect.y,
-                                      Mathf.Max(0f, rect.width - EditorGUIUtility.labelWidth), rect.height);
 
             // The button sits in the value column, which a managed reference leaves empty. Indent
             // must be zeroed or the rect gets shifted a second time.
@@ -108,29 +113,37 @@ namespace TeekayUtils.EditorTools
             string[] labels = SubclassSelectorTypes.BuildMenuLabels(types);
             Type current = property.hasMultipleDifferentValues ? null : CurrentType(property);
 
+            // Captured by path, not by SerializedProperty: menu callbacks run after OnGUI has
+            // returned, and a SerializedProperty is not valid to hold onto past that point.
+            SerializedObject serializedObject = property.serializedObject;
+            string path = property.propertyPath;
+
             var menu = new GenericMenu();
-            menu.AddItem(new GUIContent("None"), current == null, () => Assign(property, null));
+            menu.AddItem(new GUIContent("None"), current == null, () => Assign(serializedObject, path, null));
 
             if (types.Count > 0) menu.AddSeparator(string.Empty);
 
             for (int i = 0; i < types.Count; i++)
             {
                 Type type = types[i];
-                menu.AddItem(new GUIContent(labels[i]), current == type, () => Assign(property, type));
+                menu.AddItem(new GUIContent(labels[i]), current == type, () => Assign(serializedObject, path, type));
             }
 
             menu.DropDown(rect);
         }
 
-        static void Assign(SerializedProperty property, Type type)
+        static void Assign(SerializedObject serializedObject, string path, Type type)
         {
-            // The menu callback fires a frame later, by which time the SerializedObject may be
-            // holding stale data.
-            property.serializedObject.Update();
+            // Re-read: by the time the callback runs, the cached state may be stale.
+            serializedObject.Update();
+
+            SerializedProperty property = serializedObject.FindProperty(path);
+            if (property == null) return;
+
             property.managedReferenceValue = type == null ? null : Activator.CreateInstance(type);
             property.isExpanded = true;
             // Routing through the SerializedObject is what registers the undo entry.
-            property.serializedObject.ApplyModifiedProperties();
+            serializedObject.ApplyModifiedProperties();
         }
 
         static bool HasVisibleChildren(SerializedProperty property)
