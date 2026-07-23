@@ -31,7 +31,6 @@ namespace TeekayUtils.DevConsole.EditorTools
         Vector2 _categoriesScroll;
         Vector2 _bridgesScroll;
 
-        [MenuItem("Tools/DevConsole/Config")]
         public static void Open()
         {
             var window = GetWindow<DevConsoleConfigWindow>("DevConsole Config");
@@ -39,7 +38,6 @@ namespace TeekayUtils.DevConsole.EditorTools
             window.Show();
         }
 
-        [MenuItem("Tools/DevConsole/Create Config")]
         public static void CreateAndOpen()
         {
             var window = GetWindow<DevConsoleConfigWindow>("DevConsole Config");

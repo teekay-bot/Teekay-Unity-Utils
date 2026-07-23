@@ -4,6 +4,27 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-07-23
+
+### Added
+
+- **`TeekayUtils.Tags` — gameplay tag system** (promoted from Teekay-Unity-Base after proving out
+  under its Character ability layer): `GameplayTag` (interned hierarchical dotted paths,
+  reference-equality comparisons, hierarchy-aware `Matches` + string-level `PathMatches` mirror,
+  non-throwing `IsValidPath`), `TagSet` (ref-counted grants with O(1) ancestor-propagated
+  queries — two granters and one release must not clear the tag — loud unbalanced-release
+  errors, no change events by design: views poll), `GameplayTagCatalog` (edit-time vocabulary
+  asset, empty by default, validated/deduped/sorted `Add`), and `[GameplayTag]` whose drawer
+  (`Editor/Tags/GameplayTagDrawer.cs`) renders string fields as a searchable dot-hierarchy
+  picker with "New tag…" coining and a warning icon on paths missing from the catalog.
+  31 EditMode tests.
+
+### Changed
+
+- **DevConsole: removed the `Tools → DevConsole` menu items.** The config asset is created via
+  *Assets → Create → DevConsole → Config* and its Inspector still opens the config window —
+  one entry point instead of two.
+
 ## [3.1.1] - 2026-07-20
 
 ### Fixed
