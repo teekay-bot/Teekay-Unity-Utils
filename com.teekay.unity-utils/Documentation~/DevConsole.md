@@ -191,8 +191,8 @@ Two equivalent routes:
    (`Create ▸ DevConsole ▸ Config`). The console finds and applies it automatically — zero code.
 2. Call `DevConsole.Configure(myConfig)` from your own bootstrap if you would rather not use `Resources`.
 
-Edit it through **Tools ▸ DevConsole ▸ Config**, or set `DevConsoleSettings` fields directly in code
-before the first console call.
+Edit it through the config window (the asset's Inspector opens it), or set `DevConsoleSettings`
+fields directly in code before the first console call.
 
 ### Settings
 

@@ -4,6 +4,15 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-07-23
+
+### Docs
+
+- READMEs and module docs caught up with 3.2.0: the Tags module documented
+  (`Documentation~/Tags.md` + module tables + quick start), install snippets bumped, and the
+  DevConsole guide updated for the removed `Tools` menu (create via *Assets → Create*, edit via
+  the asset's Inspector).
+
 ## [3.2.0] - 2026-07-23
 
 ### Added

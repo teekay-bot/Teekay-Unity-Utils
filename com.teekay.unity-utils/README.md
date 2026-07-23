@@ -4,8 +4,8 @@
 [![UPM](https://img.shields.io/badge/UPM-git%20URL-2296F3)](../README.md#installation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE.md)
 
-Curated Unity utilities: extension methods, singletons, an event bus, debug drawing, and an in-game
-developer console. Small, tested, zero prefabs — everything is plain code.
+Curated Unity utilities: extension methods, singletons, an event bus, gameplay tags, debug
+drawing, and an in-game developer console. Small, tested, zero prefabs — everything is plain code.
 
 **Requires Unity 6000.3 (Unity 6.3 LTS) or newer.**
 **Install:** see [Installation](../README.md#installation) in the repository README.
@@ -20,6 +20,7 @@ developer console. Small, tested, zero prefabs — everything is plain code.
 | **Physics** | `ColliderComponentCache<T>` — cached `GetComponentInParent` lookups keyed by `Collider`, for overlap/raycast hot paths. | [Physics](Documentation~/Physics.md) |
 | **Singletons** | `Singleton<T>` and `PersistentSingleton<T>`. First-Awake-wins, duplicates self-destroy, no auto-create in Edit mode or during quit. | [Singleton](Documentation~/Singleton.md) |
 | **EventBus** | Type-keyed pub/sub for gameplay intents. Struct events, zero-alloc publish, one throwing listener never stops the rest. | [EventBus](Documentation~/EventBus.md) |
+| **Tags** | Hierarchical gameplay tags (Unreal-style, trimmed): interned `GameplayTag` with hierarchy-aware `Matches`, ref-counted `TagSet` with O(1) ancestor queries, plus a catalog asset and a `[GameplayTag]` Inspector picker with search and "New tag…". | [Tags](Documentation~/Tags.md) |
 | **DebugDraw** | One drawing API, two backends: Gizmos (Scene view) and GL lines (Game view + builds, Built-in **and** URP/HDRP). Spheres, domes, capsules, perception cones, circles, cubes, rays, arrows. | [DebugDraw](Documentation~/DebugDraw.md) |
 | **DevConsole** | Drop-in developer console (F12): commands, typed CVars, autocomplete, history, key bindings, Unity log capture, virtualized log with duplicate collapsing and filtering. Off in release builds by default. | [DevConsole](Documentation~/DevConsole.md) |
 | **Attributes** | `[KeyPicker]` — click-to-listen key capture instead of a 100-entry enum dropdown. `[SubclassSelector]` — type dropdown for `[SerializeReference]` fields, which Unity otherwise leaves assignable only from code. | [Attributes](Documentation~/Attributes.md) |
@@ -58,6 +59,19 @@ void OnEnable()  => EventBus.Subscribe<ScoreChanged>(e => label.text = $"{e.Tota
 void OnDisable() => EventBus.Unsubscribe<ScoreChanged>(OnScoreChanged);
 
 EventBus.Publish(new ScoreChanged { Total = score });
+```
+
+**Tags** — systems gate each other through a shared vocabulary, never through each other's classes.
+
+```csharp
+using TeekayUtils.Tags;
+
+static readonly GameplayTag Stunned  = GameplayTag.Get("Status.Stunned");
+static readonly GameplayTag Movement = GameplayTag.Get("Movement");
+
+tags.Add(GameplayTag.Get("Movement.Sprinting"));  // ref-counted grant
+if (tags.Has(Movement)) { /* true — a child answers the broad query */ }
+if (tags.HasAny(_blockedWhile)) return;           // e.g. refuse an action while stunned
 ```
 
 **DebugDraw** — the same call renders in the Scene view and in a build.
