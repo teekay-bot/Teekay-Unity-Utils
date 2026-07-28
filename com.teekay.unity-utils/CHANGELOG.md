@@ -4,6 +4,52 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-07-23
+
+### Docs
+
+- READMEs and module docs caught up with 3.2.0: the Tags module documented
+  (`Documentation~/Tags.md` + module tables + quick start), install snippets bumped, and the
+  DevConsole guide updated for the removed `Tools` menu (create via *Assets → Create*, edit via
+  the asset's Inspector).
+
+## [3.2.0] - 2026-07-23
+
+### Added
+
+- **`TeekayUtils.Tags` — gameplay tag system** (promoted from Teekay-Unity-Base after proving out
+  under its Character ability layer): `GameplayTag` (interned hierarchical dotted paths,
+  reference-equality comparisons, hierarchy-aware `Matches` + string-level `PathMatches` mirror,
+  non-throwing `IsValidPath`), `TagSet` (ref-counted grants with O(1) ancestor-propagated
+  queries — two granters and one release must not clear the tag — loud unbalanced-release
+  errors, no change events by design: views poll), `GameplayTagCatalog` (edit-time vocabulary
+  asset, empty by default, validated/deduped/sorted `Add`), and `[GameplayTag]` whose drawer
+  (`Editor/Tags/GameplayTagDrawer.cs`) renders string fields as a searchable dot-hierarchy
+  picker with "New tag…" coining and a warning icon on paths missing from the catalog.
+  31 EditMode tests.
+
+### Changed
+
+- **DevConsole: removed the `Tools → DevConsole` menu items.** The config asset is created via
+  *Assets → Create → DevConsole → Config* and its Inspector still opens the config window —
+  one entry point instead of two.
+
+## [3.1.1] - 2026-07-20
+
+### Fixed
+
+- **`[SubclassSelector]`: the type could not be changed once the chosen type had fields of its
+  own.** The header's foldout was given the full-width row, and `EditorGUI.Foldout` with
+  `toggleOnLabelClick` consumes mouse events across the *entire* rect it is handed — so it
+  swallowed every click aimed at the type dropdown sharing that row. Picking a type with no
+  serialized fields left the field editable (no children, so no foldout was drawn); picking one
+  with fields made the dropdown permanently unresponsive. The foldout is now confined to the label
+  column, leaving the value column to the dropdown.
+- **`[SubclassSelector]`: menu callbacks held a `SerializedProperty` past the end of `OnGUI`.**
+  `GenericMenu` invokes its callbacks after the GUI pass has returned, at which point a retained
+  `SerializedProperty` is no longer valid to use. The chosen type is now applied by re-resolving
+  the property from its path on the `SerializedObject`.
+
 ## [3.1.0] - 2026-07-19
 
 ### Added
