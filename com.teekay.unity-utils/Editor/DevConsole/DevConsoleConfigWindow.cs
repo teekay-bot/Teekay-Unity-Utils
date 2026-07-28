@@ -31,6 +31,9 @@ namespace TeekayUtils.DevConsole.EditorTools
         Vector2 _categoriesScroll;
         Vector2 _bridgesScroll;
 
+        /// <summary>
+        /// Opens the DevConsole configuration window.
+        /// </summary>
         public static void Open()
         {
             var window = GetWindow<DevConsoleConfigWindow>("DevConsole Config");
@@ -38,6 +41,9 @@ namespace TeekayUtils.DevConsole.EditorTools
             window.Show();
         }
 
+        /// <summary>
+        /// Opens the DevConsole configuration window and creates a new configuration asset.
+        /// </summary>
         public static void CreateAndOpen()
         {
             var window = GetWindow<DevConsoleConfigWindow>("DevConsole Config");

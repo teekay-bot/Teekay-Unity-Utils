@@ -59,6 +59,13 @@ namespace TeekayUtils.EditorTools
             EditorGUI.indentLevel--;
         }
 
+        /// <summary>
+        /// Draws the managed reference label, foldout control, and type-selection dropdown.
+        /// </summary>
+        /// <param name="rect">The area in which to draw the header.</param>
+        /// <param name="property">The managed reference property represented by the header.</param>
+        /// <param name="label">The label displayed alongside the foldout control.</param>
+        ///
         static void DrawHeader(Rect rect, SerializedProperty property, GUIContent label)
         {
             var labelRect = new Rect(rect.x, rect.y, EditorGUIUtility.labelWidth, rect.height);
@@ -104,6 +111,11 @@ namespace TeekayUtils.EditorTools
             return property.managedReferenceValue?.GetType();
         }
 
+        /// <summary>
+        /// Displays a dropdown menu for selecting the managed reference type.
+        /// </summary>
+        /// <param name="rect">The screen area in which to display the menu.</param>
+        /// <param name="property">The managed reference property whose type is selected.</param>
         static void ShowTypeMenu(Rect rect, SerializedProperty property)
         {
             Type fieldType = SubclassSelectorTypes.ResolveFieldType(property.managedReferenceFieldTypename);
@@ -132,6 +144,11 @@ namespace TeekayUtils.EditorTools
             menu.DropDown(rect);
         }
 
+        /// <summary>
+        /// Assigns a managed-reference value to the property at the specified path and expands it.
+        /// </summary>
+        /// <param name="path">The serialized property path to update.</param>
+        /// <param name="type">The type to instantiate, or <c>null</c> to clear the reference.</param>
         static void Assign(SerializedObject serializedObject, string path, Type type)
         {
             // Re-read: by the time the callback runs, the cached state may be stale.
@@ -146,6 +163,11 @@ namespace TeekayUtils.EditorTools
             serializedObject.ApplyModifiedProperties();
         }
 
+        /// <summary>
+        /// Determines whether the property has any visible child properties.
+        /// </summary>
+        /// <param name="property">The property to inspect.</param>
+        /// <returns><c>true</c> if the property has at least one visible child; otherwise, <c>false</c>.</returns>
         static bool HasVisibleChildren(SerializedProperty property)
         {
             foreach (SerializedProperty _ in VisibleChildren(property)) return true;

@@ -48,7 +48,10 @@ namespace TeekayUtils.Tags
                 _withAncestors[t] = _withAncestors.GetValueOrDefault(t) + 1;
         }
 
-        /// <summary>Releases one count of <paramref name="tag"/>. Must pair with a prior <see cref="Add"/>.</summary>
+        /// <summary>
+        /// Releases one count of the specified tag and its ancestors.
+        /// Invalid or unbalanced removals are ignored.
+        /// </summary>
         public void Remove(GameplayTag tag)
         {
             if (tag == null)
@@ -81,13 +84,25 @@ namespace TeekayUtils.Tags
         /// Hierarchy-aware: true when <paramref name="tag"/> or ANY descendant of it is held —
         /// Has("Movement") is true while "Movement.Sprinting" is granted. Null asks for no tag
         /// and is false; a null in a tag LIST is caught loudly by the ability layer at init.
-        /// </summary>
+        /// <summary>
+/// Determines whether the tag or any of its descendants is present.
+/// </summary>
+/// <param name="tag">The tag to search for.</param>
+/// <returns><c>true</c> if the tag or a descendant is present; otherwise, <c>false</c>.</returns>
         public bool Has(GameplayTag tag) => tag != null && _withAncestors.ContainsKey(tag);
 
-        /// <summary>Exact: true only when <paramref name="tag"/> itself was granted.</summary>
+        /// <summary>
+/// Determines whether a tag was granted directly.
+/// </summary>
+/// <param name="tag">The tag to check.</param>
+/// <returns><c>true</c> if the tag was granted directly; otherwise, <c>false</c>.</returns>
         public bool HasExact(GameplayTag tag) => tag != null && _explicit.ContainsKey(tag);
 
-        /// <summary>True when at least one entry matches (<see cref="Has"/> semantics). Empty list: false.</summary>
+        /// <summary>
+        /// Determines whether any tag in the collection is present, including through tag hierarchy.
+        /// </summary>
+        /// <param name="tags">The tags to check.</param>
+        /// <returns><c>true</c> if at least one tag is present; <c>false</c> if no tag matches or the collection is <c>null</c>.</returns>
         public bool HasAny(IReadOnlyList<GameplayTag> tags)
         {
             if (tags == null) return false;
@@ -100,7 +115,11 @@ namespace TeekayUtils.Tags
         /// True when every entry matches (<see cref="Has"/> semantics). Empty list: true — an
         /// empty requirement list requires nothing, so it never blocks (the same vacuous-truth
         /// convention as GAS's ActivationRequiredTags).
+        /// <summary>
+        /// Determines whether all specified tags are present, including through tag hierarchy.
         /// </summary>
+        /// <param name="tags">The tags to check.</param>
+        /// <returns><c>true</c> if every specified tag is present or the list is <c>null</c> or empty; <c>false</c> otherwise.</returns>
         public bool HasAll(IReadOnlyList<GameplayTag> tags)
         {
             if (tags == null) return true;

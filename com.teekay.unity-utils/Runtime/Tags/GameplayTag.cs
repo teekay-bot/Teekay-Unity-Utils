@@ -38,7 +38,12 @@ namespace TeekayUtils.Tags
         /// "A.B.C" materializes "A.B" and "A" too, shared with every other descendant) and returns
         /// the canonical instance. Call at init and cache the reference; the path parse is
         /// intern-time only, queries afterwards never touch strings.
+        /// <summary>
+        /// Gets the canonical gameplay tag for a valid hierarchical path.
         /// </summary>
+        /// <param name="path">The case-sensitive, dot-delimited tag path.</param>
+        /// <returns>The gameplay tag associated with the specified path.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> is invalid.</exception>
         public static GameplayTag Get(string path)
         {
             ValidatePath(path);
@@ -50,7 +55,11 @@ namespace TeekayUtils.Tags
         /// matches query "Movement" (an ability blocking all of Movement blocks sprint), but
         /// "Movement" does NOT match query "Movement.Sprinting" — a broad fact never satisfies a
         /// narrow question.
+        /// <summary>
+        /// Determines whether this tag is the specified query tag or is located under it in the hierarchy.
         /// </summary>
+        /// <param name="query">The tag to match against.</param>
+        /// <returns><c>true</c> if this tag matches the query or is a descendant of it; otherwise, <c>false</c>.</returns>
         public bool Matches(GameplayTag query)
         {
             if (query == null) return false;
@@ -59,14 +68,23 @@ namespace TeekayUtils.Tags
             return false;
         }
 
-        public override string ToString() => Path;
+        /// <summary>
+/// Gets the full dotted path of the tag.
+/// </summary>
+/// <returns>The tag's full dotted path.</returns>
+public override string ToString() => Path;
 
         /// <summary>
         /// String-level mirror of <see cref="Matches"/> for tooling that works on UNRESOLVED
         /// paths (the ability window's arbitration overview): does <paramref name="path"/> equal
         /// <paramref name="queryPath"/> or live anywhere under it. Kept next to Matches so the
         /// two definitions of "matches" cannot drift apart — tests pin their equivalence.
+        /// <summary>
+        /// Determines whether a tag path matches a query path or a descendant of it.
         /// </summary>
+        /// <param name="path">The tag path to evaluate.</param>
+        /// <param name="queryPath">The tag path to match.</param>
+        /// <returns><c>true</c> if <paramref name="path"/> equals <paramref name="queryPath"/> or begins with it followed by a dot; <c>false</c> otherwise.</returns>
         public static bool PathMatches(string path, string queryPath)
         {
             if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(queryPath)) return false;
@@ -81,7 +99,12 @@ namespace TeekayUtils.Tags
         /// Non-throwing validity check for a would-be tag path — the same rules <see cref="Get"/>
         /// enforces, exposed so edit-time tooling (the tag catalog, the Inspector picker) can
         /// judge user input without exception-driven control flow.
+        /// <summary>
+        /// Validates a dotted tag path without throwing an exception.
         /// </summary>
+        /// <param name="path">The tag path to validate.</param>
+        /// <param name="error">The validation error message, or <c>null</c> when the path is valid.</param>
+        /// <returns><c>true</c> if the path contains no empty segments, <c>false</c> otherwise.</returns>
         public static bool IsValidPath(string path, out string error)
         {
             if (string.IsNullOrEmpty(path))
@@ -107,6 +130,11 @@ namespace TeekayUtils.Tags
             return true;
         }
 
+        /// <summary>
+        /// Retrieves or creates the canonical tag for a validated path.
+        /// </summary>
+        /// <param name="path">The validated dotted path of the tag.</param>
+        /// <returns>The canonical tag associated with the specified path.</returns>
         static GameplayTag GetValidated(string path)
         {
             if (Registry.TryGetValue(path, out GameplayTag existing)) return existing;
@@ -120,7 +148,11 @@ namespace TeekayUtils.Tags
         }
 
         // Throws, not logs: interning happens at assembly/init time, and a malformed path is a
-        // typo to fix, not a runtime condition to survive (same rule as CharacterContext's ctor).
+        /// <summary>
+        /// Validates a gameplay tag path.
+        /// </summary>
+        /// <param name="path">The gameplay tag path to validate.</param>
+        /// <exception cref="System.ArgumentException">Thrown when the path is invalid.</exception>
         static void ValidatePath(string path)
         {
             if (!IsValidPath(path, out string error))

@@ -20,9 +20,21 @@ namespace TeekayUtils.EditorTools
     [CustomPropertyDrawer(typeof(GameplayTagAttribute))]
     public class GameplayTagDrawer : PropertyDrawer
     {
-        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) =>
+        /// <summary>
+            /// Determines the height required to draw the property.
+            /// </summary>
+            /// <param name="property">The serialized property being drawn.</param>
+            /// <param name="label">The property's display label.</param>
+            /// <returns>The standard single-line editor height.</returns>
+            public override float GetPropertyHeight(SerializedProperty property, GUIContent label) =>
             EditorGUIUtility.singleLineHeight;
 
+        /// <summary>
+        /// Draws a gameplay tag field with catalog selection and creation controls.
+        /// </summary>
+        /// <param name="position">The area available for drawing the field.</param>
+        /// <param name="property">The serialized property associated with the field.</param>
+        /// <param name="label">The label displayed before the field.</param>
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             if (property.propertyType != SerializedPropertyType.String)
@@ -56,6 +68,12 @@ namespace TeekayUtils.EditorTools
             }
         }
 
+        /// <summary>
+        /// Creates the dropdown content for a gameplay tag value.
+        /// </summary>
+        /// <param name="value">The gameplay tag path to display.</param>
+        /// <param name="catalog">The catalog used to determine whether the tag path is registered.</param>
+        /// <returns>Content displaying the tag path, or an empty-state or warning indicator when appropriate.</returns>
         static GUIContent BuildButtonContent(string value, GameplayTagCatalog catalog)
         {
             if (string.IsNullOrEmpty(value)) return new GUIContent("(none)");
@@ -70,6 +88,11 @@ namespace TeekayUtils.EditorTools
             return new GUIContent(value);
         }
 
+        /// <summary>
+        /// Creates a gameplay tag catalog asset when the creation button is clicked.
+        /// </summary>
+        /// <param name="field">The rectangle in which to draw the creation button.</param>
+        /// <param name="property">The serialized property associated with the drawer.</param>
         static void DrawCreateCatalogButton(Rect field, SerializedProperty property)
         {
             if (!GUI.Button(field, "No tag catalog — create one")) return;
@@ -82,6 +105,10 @@ namespace TeekayUtils.EditorTools
             // No property change — the button replaces the picker only until the catalog exists.
         }
 
+        /// <summary>
+        /// Finds the first GameplayTagCatalog asset in the project.
+        /// </summary>
+        /// <returns>The first found catalog, or null if no catalog asset exists.</returns>
         internal static GameplayTagCatalog FindCatalog()
         {
             // First hit wins — one catalog per project is the documented convention.
@@ -111,6 +138,13 @@ namespace TeekayUtils.EditorTools
             const string NoneSentinel = "";
             const string NewTagSentinel = "\0new";
 
+            /// <summary>
+            /// Initializes a tag picker dropdown for the specified catalog and serialized property.
+            /// </summary>
+            /// <param name="state">The dropdown state to restore or maintain.</param>
+            /// <param name="catalog">The catalog containing the available gameplay tags.</param>
+            /// <param name="target">The serialized object containing the property to update.</param>
+            /// <param name="propertyPath">The path of the serialized property to update.</param>
             public TagPickerDropdown(AdvancedDropdownState state, GameplayTagCatalog catalog,
                                      SerializedObject target, string propertyPath) : base(state)
             {
@@ -120,6 +154,10 @@ namespace TeekayUtils.EditorTools
                 minimumSize = new Vector2(260f, 320f);
             }
 
+            /// <summary>
+            /// Builds the hierarchical gameplay tag dropdown, including options to clear the value or create a new tag.
+            /// </summary>
+            /// <returns>The root item containing the catalog's valid tag paths and special actions.</returns>
             protected override AdvancedDropdownItem BuildRoot()
             {
                 var root = new AdvancedDropdownItem("Gameplay Tags");
@@ -184,12 +222,23 @@ namespace TeekayUtils.EditorTools
                 }
             }
 
+            /// <summary>
+            /// Gets the parent path by removing the final segment from a dot-delimited path.
+            /// </summary>
+            /// <param name="path">The dot-delimited path.</param>
+            /// <returns>The parent path, or an empty string when the path has no parent.</returns>
             static string ParentOf(string path)
             {
                 int lastDot = path.LastIndexOf('.');
                 return lastDot < 0 ? "" : path.Substring(0, lastDot);
             }
 
+            /// <summary>
+            /// Determines whether the specified path has a descendant in the sorted path list.
+            /// </summary>
+            /// <param name="sortedPaths">The tag paths to search.</param>
+            /// <param name="path">The path whose descendants are being checked.</param>
+            /// <returns><c>true</c> if a path starts with the specified path followed by a dot; <c>false</c> otherwise.</returns>
             static bool HasDescendant(List<string> sortedPaths, string path)
             {
                 string prefix = path + ".";
@@ -198,6 +247,10 @@ namespace TeekayUtils.EditorTools
                 return false;
             }
 
+            /// <summary>
+            /// Handles selection of a tag or action from the dropdown.
+            /// </summary>
+            /// <param name="item">The selected dropdown item.</param>
             protected override void ItemSelected(AdvancedDropdownItem item)
             {
                 if (!_pathsByItemId.TryGetValue(item.id, out string picked)) return; // a grouping node
@@ -211,6 +264,12 @@ namespace TeekayUtils.EditorTools
                 Apply(_target, _propertyPath, picked);
             }
 
+            /// <summary>
+            /// Applies a tag value to the serialized property identified by its property path.
+            /// </summary>
+            /// <param name="target">The serialized object containing the property.</param>
+            /// <param name="propertyPath">The path of the property to update.</param>
+            /// <param name="value">The tag value to assign.</param>
             internal static void Apply(SerializedObject target, string propertyPath, string value)
             {
                 // Re-resolved by path: see the drawer comment on stale array-element properties.
@@ -233,6 +292,12 @@ namespace TeekayUtils.EditorTools
             string _propertyPath;
             string _input = "";
 
+            /// <summary>
+            /// Opens the utility window for entering and applying a new gameplay tag path.
+            /// </summary>
+            /// <param name="catalog">The catalog to validate and update.</param>
+            /// <param name="target">The serialized object containing the property to update.</param>
+            /// <param name="propertyPath">The path of the serialized property to update.</param>
             public static void Show(GameplayTagCatalog catalog, SerializedObject target, string propertyPath)
             {
                 var window = CreateInstance<NewTagPrompt>();
@@ -244,6 +309,9 @@ namespace TeekayUtils.EditorTools
                 window.ShowUtility();
             }
 
+            /// <summary>
+            /// Displays the tag path input and adds or selects the entered gameplay tag.
+            /// </summary>
             void OnGUI()
             {
                 GUI.SetNextControlName("path");

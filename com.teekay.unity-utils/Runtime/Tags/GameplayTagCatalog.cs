@@ -27,12 +27,21 @@ namespace TeekayUtils.Tags
         /// <summary>Every registered path, unfiltered — hand-edits included, so validate on use.</summary>
         public IReadOnlyList<string> Paths => _paths;
 
-        public bool Contains(string path) => _paths.Contains(path);
+        /// <summary>
+/// Determines whether the catalog contains the specified gameplay tag path.
+/// </summary>
+/// <param name="path">The gameplay tag path to search for.</param>
+/// <returns><c>true</c> if the path is registered in the catalog; otherwise, <c>false</c>.</returns>
+public bool Contains(string path) => _paths.Contains(path);
 
         /// <summary>
         /// Registers a new path. False (with a loud log) on malformed input or a duplicate —
         /// callers are editor tooling, and a silent no-op there reads as "the button is broken".
+        /// <summary>
+        /// Registers a gameplay tag path in the catalog.
         /// </summary>
+        /// <param name="path">The gameplay tag path to register.</param>
+        /// <returns><c>true</c> if the path was registered; <c>false</c> if the path is invalid or already registered.</returns>
         public bool Add(string path)
         {
             if (!GameplayTag.IsValidPath(path, out string error))
