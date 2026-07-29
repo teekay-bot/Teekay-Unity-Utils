@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A UPM package repo with two top-level parts:
 
-- `com.teekay.unity-utils/` — THE PACKAGE. Consumers install via git URL scoped to this subfolder: `https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils#vX.Y.Z` (tags ≤ v0.4.0 predate this layout and use the repo root without `?path=`).
+- `com.teekay.unity-utils/` — THE PACKAGE. Consumers install via git URL scoped to this subfolder: `https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils` (appending `#vX.Y.Z` pins to a release; tags ≤ v0.4.0 predate this layout and use the repo root without `?path=`).
 - `DevProject/` — the Unity host project for development. References the package via `file:../../com.teekay.unity-utils` (mutable there) and lists it in `"testables"`. Consumers never receive it because `?path=` scopes the install.
 
 **The dev project folder MUST NOT have `~` in its path.** It used to be `DevProject~` and that silently broke MonoScript class binding for every registry package under its `Library/PackageCache` (TMP settings/fonts and `.inputactions` imported as empty artifacts with zero errors; survived Library wipes). Diagnose suspected recurrences with `MonoScript.GetClass()` on a registry-package script — null while the type exists at runtime means path-based hidden-folder poisoning.
@@ -43,7 +43,7 @@ Quick compile check without Unity (while the editor is open): build the `.cs` fi
 - **Never delete/rename the scene currently open in the user's editor** — the ghost copy hangs PlayMode test runs at startup (EditMode still passes). Ask the user to switch scenes first.
 - **Never create junctions/links to the dev project INSIDE the repo** — the package importer will descend into them (no `~` protection) and trigger an infinite import loop that rewrites meta GUIDs. If Unity ever mass-regenerates tracked metas, `git checkout -- DevProject/Assets` restores them.
 - **Fresh GUIDs when copying assets from other repos** (e.g. Teekay-Core-Unity) — never reuse source GUIDs.
-- **Releases**: bump `version` in `com.teekay.unity-utils/package.json`, rename `[Unreleased]` in `com.teekay.unity-utils/CHANGELOG.md` to the version + date, commit, tag `vX.Y.Z`, push with tags.
+- **Releases**: bump `version` in `com.teekay.unity-utils/package.json`, rename `[Unreleased]` in `com.teekay.unity-utils/CHANGELOG.md` to the version + date, commit, tag `vX.Y.Z`, push with tags. **Do NOT put a version in the README install URL** — it is deliberately unpinned so consumers can re-submit the same URL to update instead of being frozen on the tag they installed with. A release never edits the README's Installation section.
 - **Do not add async/coroutine helpers** — the user uses UniTask (`.ToUniTask()`, `UniTask.WaitUntil`, `OnInvokeAsync`, `.Forget()`). A UniTask dependency is deliberately deferred (would use asmdef `versionDefines`; UPM cannot declare git-URL dependencies).
 
 ## Design conventions (established with the user)

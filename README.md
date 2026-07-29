@@ -30,23 +30,10 @@ drawing, and an in-game developer console. Small, tested, zero prefabs — every
 https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils
 ```
 
-**Or edit `Packages/manifest.json`** directly:
-
-```json
-"com.teekay.unity-utils": "https://github.com/teekay-bot/Teekay-Unity-Utils.git?path=/com.teekay.unity-utils"
-```
-
-The two forms are **not** interchangeable — the Package Manager's git URL field takes the bare URL only,
-so pasting the `manifest.json` line into it fails.
-
-Both URLs above track the latest commit on `main`. Unity still locks the resolved commit in
-`packages-lock.json`, so to pull newer work later, submit the same URL again through the Package
-Manager UI — it ignores the locked hash on a fresh request. Append `#vX.Y.Z` (any tag from
-[Releases](https://github.com/teekay-bot/Teekay-Unity-Utils/releases)) to pin to a release instead;
-a pinned URL never moves, and updating means editing the tag by hand.
-
-The `.git` extension and `?path=` are both required: without `.git` the Package Manager treats the
-URL as a package name.
+This tracks the latest commit on `main`. Unity locks the resolved commit in `packages-lock.json`, so
+to pull newer work later, paste the same URL again — a fresh request ignores the locked hash. Append
+`#vX.Y.Z` (any tag from [Releases](https://github.com/teekay-bot/Teekay-Unity-Utils/releases)) to pin
+to a release instead; a pinned URL never moves, and updating means editing the tag by hand.
 
 ## Documentation
 
