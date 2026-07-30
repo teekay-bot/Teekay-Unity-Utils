@@ -18,5 +18,20 @@ namespace TeekayUtils
         /// box from the content.
         /// </summary>
         void Label(Vector3 worldPosition, string text);
+
+        /// <summary>
+        /// Text about <paramref name="subjectWorldPosition"/> but placed at
+        /// <paramref name="anchorWorldPosition"/>, for a caller that had to move the text clear of
+        /// something — geometry of its own drawing, usually.
+        /// </summary>
+        /// <remarks>
+        /// The pair is what makes the move work: a plate centred on its anchor still reaches half its
+        /// width back toward whatever the anchor was pushed away from, and the caller cannot correct
+        /// for that because the box's width is in pixels while its own offset is in metres. Given both
+        /// points the renderer projects them, sees which way the push went ON SCREEN, and keeps the
+        /// plate entirely on that side. Deciding the side in world space would get it backwards
+        /// whenever the camera looks from the other side.
+        /// </remarks>
+        void Label(Vector3 subjectWorldPosition, Vector3 anchorWorldPosition, string text);
     }
 }

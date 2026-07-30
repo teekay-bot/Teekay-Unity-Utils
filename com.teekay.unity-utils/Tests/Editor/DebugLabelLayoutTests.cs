@@ -165,6 +165,39 @@ namespace TeekayUtils.Tests
         }
 
         [Test]
+        public void SidePlacement_KeepsTheBoxWhollyOnThatSide()
+        {
+            var results = new List<DebugLabelLayout.Placed>();
+
+            // The case it exists for: an anchor deliberately pushed clear of something. Centred, the
+            // box would reach half its width straight back over whatever it was pushed away from.
+            DebugLabelLayout.Request right = At(500f, 500f, "right", width: 80f);
+            right.Side = 1f;
+            DebugLabelLayout.Request left = At(900f, 500f, "left", width: 80f);
+            left.Side = -1f;
+
+            DebugLabelLayout.Arrange(Requests(right, left), results, Screen1080);
+
+            Assert.That(results.Find(p => p.Text == "right").Box.xMin, Is.EqualTo(500f).Within(0.01f));
+            Assert.That(results.Find(p => p.Text == "left").Box.xMax, Is.EqualTo(900f).Within(0.01f));
+        }
+
+        [Test]
+        public void SidePlacement_IsNotReportedAsDisplaced()
+        {
+            var results = new List<DebugLabelLayout.Placed>();
+
+            DebugLabelLayout.Request request = At(500f, 500f, "aside");
+            request.Side = 1f;
+
+            DebugLabelLayout.Arrange(Requests(request), results, Screen1080);
+
+            // Off-centre because it was ASKED to be. A stem here would appear on every side-placed
+            // label and mean nothing.
+            Assert.That(results[0].Displaced, Is.False);
+        }
+
+        [Test]
         public void EmptyText_IsSkipped()
         {
             var results = new List<DebugLabelLayout.Placed>();

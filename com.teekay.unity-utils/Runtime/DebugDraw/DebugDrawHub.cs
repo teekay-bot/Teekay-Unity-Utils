@@ -73,7 +73,10 @@ namespace TeekayUtils
 
         readonly List<IDebugDrawable> _drawables = new List<IDebugDrawable>(8);
         readonly DebugDrawBuffer _buffer = new DebugDrawBuffer();
-        readonly List<(Vector3 Position, string Text)> _labels = new List<(Vector3, string)>(32);
+        // Subject and position differ only when the caller moved the text clear of something; the pair
+        // is what lets the renderer keep the plate on the side it was pushed toward.
+        readonly List<(Vector3 Subject, Vector3 Position, string Text)> _labels =
+            new List<(Vector3, Vector3, string)>(32);
 
         // Reused every frame on both surfaces: projection and placement are per-view (the Scene view
         // and the Game view see the same world from different cameras), the collected facts are not.
@@ -288,7 +291,7 @@ namespace TeekayUtils
 
             _labelRequests.Clear();
 
-            foreach ((Vector3 position, string text) in _labels)
+            foreach ((Vector3 subject, Vector3 position, string text) in _labels)
             {
                 if (!TryProjectToGui(position, sceneView, out Vector2 anchor)) continue;
 
@@ -296,7 +299,8 @@ namespace TeekayUtils
                 {
                     Anchor = anchor,
                     Size = style.CalcSize(new GUIContent(text)),
-                    Text = text
+                    Text = text,
+                    Side = SideAwayFrom(subject, anchor, sceneView)
                 });
             }
 
@@ -384,9 +388,26 @@ namespace TeekayUtils
             GUI.Label(box, label.Text, style);
         }
 
-        public void Label(Vector3 worldPosition, string text)
+        /// <summary>
+        /// Which way the anchor was pushed, ON SCREEN. Only the projection knows: the same world-space
+        /// push reads as left or right depending on where the camera stands, so a caller deciding this
+        /// in world space would get it backwards half the time.
+        /// </summary>
+        float SideAwayFrom(Vector3 subject, Vector2 anchor, bool sceneView)
         {
-            if (!string.IsNullOrEmpty(text)) _labels.Add((worldPosition, text));
+            if (!TryProjectToGui(subject, sceneView, out Vector2 subjectPoint)) return 0f;
+
+            // A pixel of separation is noise, not an intent to move the plate aside.
+            float delta = anchor.x - subjectPoint.x;
+
+            return Mathf.Abs(delta) < 1f ? 0f : Mathf.Sign(delta);
+        }
+
+        public void Label(Vector3 worldPosition, string text) => Label(worldPosition, worldPosition, text);
+
+        public void Label(Vector3 subjectWorldPosition, Vector3 anchorWorldPosition, string text)
+        {
+            if (!string.IsNullOrEmpty(text)) _labels.Add((subjectWorldPosition, anchorWorldPosition, text));
         }
 
 #if UNITY_EDITOR

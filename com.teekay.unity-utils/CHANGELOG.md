@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.2] - 2026-07-30
+
+### Added
+
+- **`IDebugLabelSink.Label(subject, anchor, text)`** — text ABOUT one world point but PLACED at
+  another, for an overlay that had to move a label clear of its own geometry. The pair is what makes
+  the move work: a plate centred on its anchor still reaches half its width back toward whatever the
+  anchor was pushed away from, and the caller cannot correct for that, because the box's width is in
+  pixels while its own offset is in metres. Given both points the hub projects them, sees which way
+  the push went *on screen*, and keeps the plate wholly on that side — deciding it in world space
+  would get it backwards whenever the camera looks from the other side. `DebugLabelLayout.Request`
+  gained a matching `Side` (0 centres, ±1 places the box entirely to one side), and a box placed
+  aside is not reported as `Displaced`, since it is where it asked to be. Existing one-position
+  `Label` calls are unchanged and still centre.
+
 ## [3.4.1] - 2026-07-30
 
 ### Fixed

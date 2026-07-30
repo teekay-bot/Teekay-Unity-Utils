@@ -58,6 +58,14 @@ namespace TeekayUtils
 
             /// <summary>The text to draw. Empty requests are skipped.</summary>
             public string Text;
+
+            /// <summary>
+            /// Which side of <see cref="Anchor"/> the box sits on: 0 centres it, +1 puts it entirely to
+            /// the right, -1 entirely to the left, and values between slide it across. For an anchor
+            /// that was deliberately pushed clear of something, a centred box still reaches half its
+            /// width back over it — this is how the caller says which way "clear" was.
+            /// </summary>
+            public float Side;
         }
 
         /// <summary>One label after placement: the box to draw in, and whether it left its anchor.</summary>
@@ -106,8 +114,11 @@ namespace TeekayUtils
                 if (IsDuplicate(results, request, dedupeRadius)) continue;
 
                 float desiredTop = request.Anchor.y - gap - request.Size.y;
-                var box = new Rect(request.Anchor.x - request.Size.x * 0.5f, desiredTop,
-                    request.Size.x, request.Size.y);
+                // Side 0 leaves the box centred (half its width either way); ±1 slides it until the
+                // anchor is at one edge, so the box lies wholly to that side.
+                float side = Mathf.Clamp(request.Side, -1f, 1f);
+                float desiredLeft = request.Anchor.x - request.Size.x * 0.5f * (1f - side);
+                var box = new Rect(desiredLeft, desiredTop, request.Size.x, request.Size.y);
 
                 box = MoveAboveOverlaps(results, box, gap);
                 box = KeepInside(box, bounds);
@@ -117,9 +128,12 @@ namespace TeekayUtils
                     Anchor = request.Anchor,
                     Box = box,
                     Text = request.Text,
+                    // Measured against where the box ASKED to be, not against the anchor: a caller that
+                    // requested a side wanted the box off-centre, and calling that "displaced" would
+                    // put a stem on every one of them.
                     // Half a pixel: below that it is a rounding artefact, not a move worth a stem.
                     Displaced = Mathf.Abs(box.y - desiredTop) > 0.5f
-                                || Mathf.Abs(box.center.x - request.Anchor.x) > 0.5f
+                                || Mathf.Abs(box.x - desiredLeft) > 0.5f
                 });
             }
         }
