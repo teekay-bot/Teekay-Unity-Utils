@@ -120,6 +120,21 @@ namespace TeekayUtils
 #endif
         }
 
+        /// <summary>
+        /// Drops a toggle registered by <see cref="RegisterToggle"/>. Console variable names are
+        /// global, so an object that owns some must release them when it goes away — a variable
+        /// still bound to a disabled component answers with values nobody can see, which reads as a
+        /// broken toggle rather than an unowned one.
+        /// </summary>
+        public static void UnregisterToggle(string name)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            DevConsoleApi.Unregister($"{CVarPrefix}.{name}");
+#endif
+        }
+
         protected override void Awake()
         {
             base.Awake();
