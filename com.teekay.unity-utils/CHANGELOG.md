@@ -31,7 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   listening, so measuring inside it (an extra raycast to explain a verdict, a string for a label) is
   safe — the "measure into lists, draw from lists" split every overlay used to need exists only
   because `OnGUI` runs several times a frame. Stores two primitives: line segments, plus `Sphere`
-  kept whole because the backends render it differently on purpose. 10 EditMode tests.
+  kept whole because the backends render it differently on purpose. 9 EditMode tests (suite total
+  140 → 149, verified in a consumer's Test Runner).
 
 ## [3.2.1] - 2026-07-23
 
