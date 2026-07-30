@@ -48,8 +48,18 @@ namespace TeekayUtils
         const bool DefaultEnabled = false;
 #endif
 
-        const float LabelWidth = 300f;
         const int LabelFontSize = 12;
+
+        // A box, not a drop shadow. Debug labels land on arbitrary scenery and, worse, on the overlay's
+        // own wireframes — and a 1px shadow behind bold text is no contrast at all against lines of
+        // similar luminance, which is what made annotated shapes unreadable exactly where they were
+        // busiest. An opaque-enough plate wins against anything underneath.
+        static readonly Color LabelFill = new Color(0.05f, 0.05f, 0.07f, 0.82f);
+        static readonly Color LabelOutline = new Color(1f, 1f, 1f, 0.16f);
+        static readonly Color LabelText = Color.white;
+        static readonly Color LabelStem = new Color(1f, 1f, 1f, 0.35f);
+        const float LabelCornerRadius = 4f;
+        const float LabelStemWidth = 1f;
 
         /// <summary>
         /// Master switch over every overlay — the `debugdraw` console variable. Off means no
@@ -60,6 +70,11 @@ namespace TeekayUtils
         readonly List<IDebugDrawable> _drawables = new List<IDebugDrawable>(8);
         readonly DebugDrawBuffer _buffer = new DebugDrawBuffer();
         readonly List<(Vector3 Position, string Text)> _labels = new List<(Vector3, string)>(32);
+
+        // Reused every frame on both surfaces: projection and placement are per-view (the Scene view
+        // and the Game view see the same world from different cameras), the collected facts are not.
+        readonly List<DebugLabelLayout.Request> _labelRequests = new List<DebugLabelLayout.Request>(32);
+        readonly List<DebugLabelLayout.Placed> _placedLabels = new List<DebugLabelLayout.Placed>(32);
 
 #if UNITY_EDITOR
         readonly GizmosDebugDrawer _gizmos = new GizmosDebugDrawer();
@@ -217,30 +232,126 @@ namespace TeekayUtils
         {
             if (!Enabled || _labels.Count == 0 || _camera == null) return;
 
-            _labelStyle ??= new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.UpperCenter,
-                fontSize = LabelFontSize,
-                fontStyle = FontStyle.Bold,
-                wordWrap = false
-            };
+            DrawLabels(sceneView: false, new Rect(0f, 0f, Screen.width, Screen.height));
+        }
+
+        /// <summary>
+        /// The one label renderer, shared by the Game view and the Scene view. Only the projection
+        /// differs between them; everything the eye judges — the plate, the font, the placement, the
+        /// deduping — has to be identical, or the same overlay reads as two different tools.
+        /// <para>
+        /// This is why the Scene view no longer calls <c>Handles.Label(position, text)</c>: that
+        /// overload takes "the label style from the current GUISkin" (per its own documentation),
+        /// which is unstyled, unboxed, left-anchored text — the worst possible surface for a label
+        /// that lands on top of the wireframes this hub just drew.
+        /// </para>
+        /// </summary>
+        /// <param name="bounds">
+        /// The visible area in GUI space, measured by the CALLER. Each surface knows its own extent
+        /// before the GUI block opens; asking mid-draw would mean guessing which camera is current.
+        /// </param>
+        void DrawLabels(bool sceneView, Rect bounds)
+        {
+            GUIStyle style = LabelStyle;
+            Color previousColor = GUI.color;
+            GUI.color = Color.white; // the plate and the text carry their own colours
+
+            _labelRequests.Clear();
 
             foreach ((Vector3 position, string text) in _labels)
             {
-                Vector3 screenPos = _camera.WorldToScreenPoint(position);
-                if (screenPos.z <= 0f) continue; // behind the camera
+                if (!TryProjectToGui(position, sceneView, out Vector2 anchor)) continue;
 
-                float height = _labelStyle.CalcHeight(new GUIContent(text), LabelWidth);
-                var rect = new Rect(screenPos.x - LabelWidth * 0.5f, Screen.height - screenPos.y - height,
-                    LabelWidth, height);
-
-                // Shadow first, then the text: debug labels land on arbitrary scenery, and plain
-                // white is unreadable against a bright wall.
-                GUI.color = Color.black;
-                GUI.Label(new Rect(rect.x + 1f, rect.y + 1f, rect.width, rect.height), text, _labelStyle);
-                GUI.color = Color.white;
-                GUI.Label(rect, text, _labelStyle);
+                _labelRequests.Add(new DebugLabelLayout.Request
+                {
+                    Anchor = anchor,
+                    Size = style.CalcSize(new GUIContent(text)),
+                    Text = text
+                });
             }
+
+            DebugLabelLayout.Arrange(_labelRequests, _placedLabels, bounds);
+
+            for (int i = 0; i < _placedLabels.Count; i++) DrawLabel(_placedLabels[i], style);
+
+            GUI.color = previousColor;
+        }
+
+        /// <summary>
+        /// Built lazily rather than in a field initialiser: <c>GUI.skin</c> is only valid inside a GUI
+        /// block, and the text colour has to be forced because the two skins disagree — the editor's
+        /// label is near-black, which would vanish on the dark plate.
+        /// </summary>
+        GUIStyle LabelStyle
+        {
+            get
+            {
+                if (_labelStyle != null) return _labelStyle;
+
+                _labelStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.UpperLeft,
+                    fontSize = LabelFontSize,
+                    fontStyle = FontStyle.Bold,
+                    wordWrap = false,
+                    // The plate is sized from CalcSize, which includes padding — so this is what
+                    // separates the text from the plate's edge.
+                    padding = new RectOffset(6, 6, 3, 4)
+                };
+                _labelStyle.normal.textColor = LabelText;
+
+                return _labelStyle;
+            }
+        }
+
+        /// <summary>
+        /// World position to GUI point (y growing downward), returning false for anything the view
+        /// cannot show.
+        /// </summary>
+        bool TryProjectToGui(Vector3 worldPosition, bool sceneView, out Vector2 guiPoint)
+        {
+#if UNITY_EDITOR
+            if (sceneView)
+            {
+                // Already in GUI space and already flipped, and it follows the scene camera the
+                // gizmo pass is drawing for — projecting by hand here would be a second, disagreeing
+                // version of what Handles already knows.
+                Vector3 sceneGui = UnityEditor.HandleUtility.WorldToGUIPointWithDepth(worldPosition);
+                guiPoint = new Vector2(sceneGui.x, sceneGui.y);
+
+                return sceneGui.z > 0f; // z is the distance from the camera
+            }
+#endif
+            Vector3 screen = _camera.WorldToScreenPoint(worldPosition);
+            guiPoint = new Vector2(screen.x, Screen.height - screen.y);
+
+            return screen.z > 0f;
+        }
+
+        static void DrawLabel(in DebugLabelLayout.Placed label, GUIStyle style)
+        {
+            Rect box = label.Box;
+
+            // A box that had to move no longer sits on the thing it describes, so it gets a stem back
+            // to it. Without one the numbers appear to belong to whatever the box now hovers over,
+            // which is the one failure mode worse than an unreadable label.
+            if (label.Displaced)
+            {
+                float stemHeight = label.Anchor.y - box.yMax;
+                if (stemHeight > 0f)
+                    GUI.DrawTexture(new Rect(label.Anchor.x, box.yMax, LabelStemWidth, stemHeight),
+                        Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, LabelStem,
+                        Vector4.zero, 0f);
+            }
+
+            // borderWidths zero fills the rect, non-zero strokes it — the same call does plate and
+            // outline, and it is the only IMGUI path that rounds corners at all.
+            GUI.DrawTexture(box, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, LabelFill,
+                Vector4.zero, LabelCornerRadius);
+            GUI.DrawTexture(box, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0f, LabelOutline,
+                Vector4.one, LabelCornerRadius);
+
+            GUI.Label(box, label.Text, style);
         }
 
         public void Label(Vector3 worldPosition, string text)
@@ -258,8 +369,18 @@ namespace TeekayUtils
 
             _buffer.Replay(_gizmos);
 
-            foreach ((Vector3 position, string text) in _labels)
-                UnityEditor.Handles.Label(position, text);
+            if (_labels.Count == 0) return;
+
+            // Measured here, while Camera.current is still the scene camera this pass draws for: in
+            // the Scene view, GUI space is that view's own rect, and Screen.* is the wrong ruler.
+            var bounds = new Rect(0f, 0f, Camera.current.pixelWidth, Camera.current.pixelHeight);
+
+            // Opens a 2D GUI block inside the handle pass, which is what lets the shared renderer run
+            // here at all — this is the same thing Handles.Label does internally, minus its unstyled
+            // label.
+            UnityEditor.Handles.BeginGUI();
+            DrawLabels(sceneView: true, bounds);
+            UnityEditor.Handles.EndGUI();
         }
 #endif
     }

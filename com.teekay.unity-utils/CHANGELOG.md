@@ -4,6 +4,35 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-07-30
+
+### Changed
+
+- **Debug labels are drawn as boxed plates, by one renderer shared between the Scene view and the
+  Game view.** Previously the Game view got bold centred text with a 1px drop shadow while the Scene
+  view called `Handles.Label(position, text)`, whose documented behaviour is to use "the label style
+  from the current GUISkin" — unstyled, unboxed, left-anchored text. So the same overlay looked like
+  two different tools, and on the surface where labels land *on top of the wireframes the hub just
+  drew*, it had no contrast affordance at all. Both surfaces now project into GUI space (the Scene
+  view via `HandleUtility.WorldToGUIPointWithDepth`, inside a `Handles.BeginGUI` block) and run the
+  same plate-and-text pass: a dark rounded plate with a hairline outline, drawn with
+  `GUI.DrawTexture`'s `borderWidths`/`borderRadius` overload — the only IMGUI path that rounds
+  corners.
+- **Labels no longer overlap, cover their subject, or repeat themselves** — placement moved into a
+  new pure `DebugLabelLayout.Arrange` (12 tests). A box sits ABOVE its anchor, because a label that
+  covers the geometry it annotates hides the thing it was drawn to explain; overlaps resolve by
+  moving further up, into empty sky rather than across the scene, processed from the lowest anchor
+  first so the pushes go that way; a box that had to move is marked `Displaced` and gets a stem back
+  to its anchor, since a label floating free of its subject silently attributes its numbers to
+  whatever it hovers over.
+  - Labels with the SAME text and near-identical anchors are drawn once. This is the case that made
+    annotated overlays unreadable in practice: a value re-evaluated several times inside one
+    simulation step (a physics solver judging stability per sweep, say) produced a stack of identical
+    strings a few pixels apart, which renders as thickened mush rather than as text.
+  - The layout is separate from the hub and free of any GUI call because the part that goes wrong is
+    arithmetic — which box moved, how far, whether it still points at its own fact — and that is
+    exactly what looking at a screenshot cannot confirm.
+
 ## [3.3.0] - 2026-07-30
 
 ### Added
