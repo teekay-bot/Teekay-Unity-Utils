@@ -54,7 +54,11 @@ namespace TeekayUtils
         // own wireframes — and a 1px shadow behind bold text is no contrast at all against lines of
         // similar luminance, which is what made annotated shapes unreadable exactly where they were
         // busiest. An opaque-enough plate wins against anything underneath.
-        static readonly Color LabelFill = new Color(0.05f, 0.05f, 0.07f, 0.82f);
+        // Nearly opaque on purpose. The plate's job is to OCCLUDE, and the overlay's own wireframes are
+        // saturated green and yellow — at 0.82 the ~18% that bled through was still bright enough to
+        // read as lines crossing the text. What is left of the alpha only softens the edge against the
+        // scene.
+        static readonly Color LabelFill = new Color(0.05f, 0.05f, 0.07f, 0.94f);
         static readonly Color LabelOutline = new Color(1f, 1f, 1f, 0.16f);
         static readonly Color LabelText = Color.white;
         static readonly Color LabelStem = new Color(1f, 1f, 1f, 0.35f);
@@ -166,6 +170,32 @@ namespace TeekayUtils
             if (_renderer != null) _renderer.Drawing -= OnRendererDrawing;
             base.OnDestroy();
         }
+
+#if UNITY_EDITOR
+        // Labels are drawn from the Scene view's own GUI pass rather than from OnDrawGizmos, because
+        // that pass runs AFTER the view has rendered its contents — so a plate is guaranteed to sit on
+        // top of every gizmo, including ones this hub does not draw (the selected object's collider
+        // wireframe, other components' OnDrawGizmos). Ordering between gizmo callbacks is not
+        // something a drawable can control, so the fix is to stop depending on it.
+        void OnEnable() => UnityEditor.SceneView.duringSceneGui += OnSceneGui;
+
+        void OnDisable() => UnityEditor.SceneView.duringSceneGui -= OnSceneGui;
+
+        void OnSceneGui(UnityEditor.SceneView sceneView)
+        {
+            // Repaint only: every other event type is bookkeeping, and drawing during those is how
+            // IMGUI ends up reporting mismatched layout.
+            if (!Enabled || _labels.Count == 0 || Event.current.type != EventType.Repaint) return;
+
+            var bounds = new Rect(0f, 0f, sceneView.position.width, sceneView.position.height);
+
+            // Opens a 2D GUI block inside the handle context, the documented pairing for
+            // HandleUtility.WorldToGUIPoint.
+            UnityEditor.Handles.BeginGUI();
+            DrawLabels(sceneView: true, bounds);
+            UnityEditor.Handles.EndGUI();
+        }
+#endif
 
         // The single collection pass. Everything else in this class only replays what it produced.
         void LateUpdate()
@@ -367,20 +397,9 @@ namespace TeekayUtils
             // The Scene view is the only surface gizmos are responsible for.
             if (Camera.current == null || Camera.current.cameraType != CameraType.SceneView) return;
 
+            // Shapes only. The labels for this same overlay are drawn in OnSceneGui, one pass later,
+            // so nothing the gizmo pass draws can land on top of them.
             _buffer.Replay(_gizmos);
-
-            if (_labels.Count == 0) return;
-
-            // Measured here, while Camera.current is still the scene camera this pass draws for: in
-            // the Scene view, GUI space is that view's own rect, and Screen.* is the wrong ruler.
-            var bounds = new Rect(0f, 0f, Camera.current.pixelWidth, Camera.current.pixelHeight);
-
-            // Opens a 2D GUI block inside the handle pass, which is what lets the shared renderer run
-            // here at all — this is the same thing Handles.Label does internally, minus its unstyled
-            // label.
-            UnityEditor.Handles.BeginGUI();
-            DrawLabels(sceneView: true, bounds);
-            UnityEditor.Handles.EndGUI();
         }
 #endif
     }

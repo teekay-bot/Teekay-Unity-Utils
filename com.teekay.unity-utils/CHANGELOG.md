@@ -4,6 +4,22 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-07-30
+
+### Fixed
+
+- **Scene-view labels are no longer drawn over by gizmos.** They now render from
+  `SceneView.duringSceneGui` — the Scene view's own GUI pass, which runs after the view has rendered
+  its contents — instead of from `OnDrawGizmos`. A drawable cannot control the order of gizmo
+  callbacks, so a plate drawn there could still be crossed by gizmos it does not own: the selected
+  object's collider wireframe, or any other component's `OnDrawGizmos`. Drawing one pass later stops
+  the ordering from mattering at all. `OnDrawGizmos` keeps the shapes; the labels for the same
+  overlay follow in the GUI pass. (Game-view labels were already last — `OnGUI` composites after
+  rendering — and are unchanged.)
+- **Label plates are near-opaque (alpha 0.82 → 0.94).** The plate's job is to occlude, and debug
+  overlays draw saturated green and yellow wireframes: the 18% that bled through was still bright
+  enough to read as lines crossing the text.
+
 ## [3.4.0] - 2026-07-30
 
 ### Changed
