@@ -129,6 +129,78 @@ you want the volume.
 
 ---
 
+## Built-in overlays: `IDebugDrawable` + `DebugDrawHub`
+
+The two backends above are the low level. When a *system* should be able to show its own workings —
+a motor explaining why it thinks it is airborne, a targeting pipeline showing what it scored — do not
+write another visualiser component. Implement `IDebugDrawable` on the class that owns the facts and
+register it:
+
+```csharp
+public sealed partial class Motor : MonoBehaviour, IDebugDrawable
+{
+    [SerializeField] bool _drawGrounding = true;
+
+    public bool DebugEnabled => _drawGrounding;
+
+    void OnEnable()
+    {
+        DebugDrawHub.Register(this);
+        DebugDrawHub.RegisterToggle("motor.grounding", "Ground normal + slope verdict.",
+            () => _drawGrounding, v => _drawGrounding = v);
+    }
+
+    void OnDisable() => DebugDrawHub.Unregister(this);
+
+    public void DrawDebug(IDebugDrawer drawer, IDebugLabelSink labels)
+    {
+        drawer.Arrow(_groundPoint, _groundNormal * 0.4f, _stable ? Color.green : Color.red);
+        labels.Label(_groundPoint, $"{_slopeAngle:0}° vs max {_maxSlope:0}°");
+    }
+}
+```
+
+That is the whole integration. The hub is auto-created on the first registration in Play mode — no
+prefab, no scene object, nothing to forget when a character is spawned at runtime — and it owns:
+
+| Surface | How |
+|---|---|
+| Game view + builds | Attaches `GLDebugDrawRenderer` to `Camera.main` and replays there |
+| Scene view | Its own `OnDrawGizmos`, gated to Scene-view cameras so Game-view gizmos don't double-draw |
+| Labels | IMGUI with a shadow (readable on any scenery) in the Game view, `Handles.Label` in the Scene view |
+| Toggles | `debugdraw` master + one console variable per registered toggle |
+
+### Why the owner draws its own state
+
+A separate `Debug*Visualizer` component can only read what the owner makes public, so the overlay's
+appetite for internals leaks into the production API — and the most useful facts (a per-hit verdict, the
+intent before the solver reshaped it) often live for one call and are never stored. Drawing from inside
+keeps them private and keeps one fact to one drawing site.
+
+Config shapes stay on gizmos: `OnDrawGizmosSelected` draws the volumes a query is asked over (visible
+without entering Play mode), `DrawDebug` draws what was measured. Draw the same fact from both and you
+get two arrows on screen and an afternoon spent wondering which one is lying.
+
+### `DrawDebug` is called exactly once per frame
+
+`DebugDrawHub` collects into a `DebugDrawBuffer` — an `IDebugDrawer` that records instead of rendering —
+and replays that buffer to each surface. So measuring inside `DrawDebug` is safe: an extra raycast to
+explain a verdict, a string built for a label. Drawing straight to a backend cannot promise this, because
+`OnGUI` runs several times a frame and the gizmo pass is separate again; the usual workaround is splitting
+every overlay into "measure into lists" and "draw from lists", and recording removes the reason to.
+
+`DebugDrawBuffer` is public, so it is also useful on its own — capture a frame, replay it into a different
+backend, or assert on the segments in a test.
+
+### Cost in a shipped game: none
+
+`Register`, `RegisterToggle` and the console wiring are compiled out unless `UNITY_EDITOR` or
+`DEVELOPMENT_BUILD` is defined. A release player creates no hub, spawns no console and calls no draw
+code, so leaving overlays in the shipped system costs nothing. A `Development Build` keeps them, which is
+what QA builds want.
+
+---
+
 ## Cost
 
 The default sphere is 176 line segments. In Gizmos that is 176 `Gizmos.DrawLine` calls per sphere —

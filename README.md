@@ -44,7 +44,7 @@ to a release instead; a pinned URL never moves, and updating means editing the t
 | [Singleton](com.teekay.unity-utils/Documentation~/Singleton.md) | Scene-local and persistent singleton base classes. |
 | [EventBus](com.teekay.unity-utils/Documentation~/EventBus.md) | Type-keyed pub/sub with zero-alloc publish. |
 | [Tags](com.teekay.unity-utils/Documentation~/Tags.md) | Hierarchical gameplay tags: interned `GameplayTag`, ref-counted `TagSet`, catalog asset + `[GameplayTag]` Inspector picker. |
-| [DebugDraw](com.teekay.unity-utils/Documentation~/DebugDraw.md) | One drawing API, rendering in the Scene view **and** in builds under any pipeline. |
+| [DebugDraw](com.teekay.unity-utils/Documentation~/DebugDraw.md) | One drawing API, rendering in the Scene view **and** in builds under any pipeline — plus `IDebugDrawable`/`DebugDrawHub`, so a system draws its own measured state with no scene setup. |
 | [DevConsole](com.teekay.unity-utils/Documentation~/DevConsole.md) | In-game console: commands, CVars, autocomplete, bindings, log capture. |
 | [Attributes](com.teekay.unity-utils/Documentation~/Attributes.md) | `[KeyPicker]` click-to-listen key capture, `[SubclassSelector]` type dropdown for `[SerializeReference]` fields. |
 

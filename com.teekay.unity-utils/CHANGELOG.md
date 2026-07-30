@@ -4,6 +4,35 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-07-30
+
+### Added
+
+- **Built-in debug overlays — `IDebugDrawable` + `DebugDrawHub`.** A system now draws its own
+  measured state instead of shipping a companion `Debug*Visualizer` component: implement
+  `IDebugDrawable` on the class that owns the facts, call `DebugDrawHub.Register(this)` in
+  `OnEnable`, and the hub handles every surface — GL lines over the Game view and builds, gizmos in
+  the Scene view (gated so Game-view gizmos can't double-draw), shadowed IMGUI labels via
+  `IDebugLabelSink`, and `debugdraw.*` console variables through `RegisterToggle`. Auto-created on
+  first registration in Play mode, so a runtime-spawned character needs no scene setup.
+  - Motivation: that plumbing was ~100 identical lines per overlay (camera resolve, `Drawing`
+    subscribe/unsubscribe, Scene-view gating, label projection, execution order) and it had already
+    been copied verbatim between two systems. Worse, a separate visualiser can only read what the
+    owner makes public, so overlays pushed debug accessors into production APIs while the most
+    useful facts — per-hit verdicts, intent before the solver reshaped it — were never stored at all.
+  - `RegisterToggle` binds a console variable to the caller's existing field through get/set
+    accessors, and is deliberately NOT persistent: a persistent variable restores its saved value at
+    registration and would overwrite what the component serialized, leaving two sources of truth for
+    one flag.
+  - `Register`, `RegisterToggle` and the console wiring compile out unless `UNITY_EDITOR` or
+    `DEVELOPMENT_BUILD` — a release player creates no hub, spawns no console and runs no draw code.
+- **`DebugDrawBuffer`** — an `IDebugDrawer` that records instead of rendering, then replays into any
+  backend. This is what lets `DrawDebug` be called exactly once per frame however many surfaces are
+  listening, so measuring inside it (an extra raycast to explain a verdict, a string for a label) is
+  safe — the "measure into lists, draw from lists" split every overlay used to need exists only
+  because `OnGUI` runs several times a frame. Stores two primitives: line segments, plus `Sphere`
+  kept whole because the backends render it differently on purpose. 10 EditMode tests.
+
 ## [3.2.1] - 2026-07-23
 
 ### Docs
