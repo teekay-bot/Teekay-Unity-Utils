@@ -77,17 +77,35 @@ namespace TeekayUtils
         /// Re-issues everything recorded to a real backend. Cheap enough to call once per surface
         /// per frame — it is a walk over two arrays.
         /// </summary>
-        public void Replay(IDebugDrawer target)
+        public void Replay(IDebugDrawer target) => Replay(target, 0, _segmentCount, 0, _dotCount);
+
+        /// <summary>
+        /// Re-issues one SLICE of what was recorded. Counts only ever grow while a frame is being
+        /// collected, so a caller that reads <see cref="SegmentCount"/> and <see cref="DotCount"/>
+        /// before and after each contributor ends up holding a range per contributor — which is
+        /// what lets ONE shared recording go to different surfaces for different contributors,
+        /// without asking any of them to describe itself twice.
+        /// </summary>
+        /// <remarks>
+        /// Indices are clamped rather than rejected: the ranges come from marks taken around a call
+        /// that may have been cut short by the segment cap, and a debug overlay is the last place
+        /// that should turn a truncated frame into an exception.
+        /// </remarks>
+        public void Replay(IDebugDrawer target, int fromSegment, int toSegment, int fromDot, int toDot)
         {
             if (target == null) return;
 
-            for (int i = 0; i < _segmentCount; i++)
+            int segmentFrom = Mathf.Clamp(fromSegment, 0, _segmentCount);
+            int segmentTo = Mathf.Clamp(toSegment, segmentFrom, _segmentCount);
+            for (int i = segmentFrom; i < segmentTo; i++)
             {
                 Segment segment = _segments[i];
                 target.Line(segment.From, segment.To, segment.Color);
             }
 
-            for (int i = 0; i < _dotCount; i++)
+            int dotFrom = Mathf.Clamp(fromDot, 0, _dotCount);
+            int dotTo = Mathf.Clamp(toDot, dotFrom, _dotCount);
+            for (int i = dotFrom; i < dotTo; i++)
             {
                 Dot dot = _dots[i];
                 target.Sphere(dot.Center, dot.Radius, dot.Color);

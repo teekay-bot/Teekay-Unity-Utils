@@ -165,5 +165,86 @@ namespace TeekayUtils.Tests
 
             Assert.DoesNotThrow(() => buffer.Replay(null));
         }
+
+        // ---------- ranged replay: one recording, a different surface per contributor ----------
+
+        [Test]
+        public void RangedReplay_EmitsOnlyTheSlice()
+        {
+            // The pattern callers use: read the counts before and after each contributor, and the
+            // difference IS that contributor's share of a shared recording.
+            var buffer = new DebugDrawBuffer();
+            buffer.Line(Vector3.zero, Vector3.right, Color.white);      // contributor A
+
+            int mark = buffer.SegmentCount;
+            buffer.Line(Vector3.zero, Vector3.up, Color.red);           // contributor B
+            buffer.Line(Vector3.zero, Vector3.forward, Color.red);
+
+            var target = new CountingDrawer();
+            buffer.Replay(target, mark, buffer.SegmentCount, 0, 0);
+
+            Assert.That(target.Segments, Has.Count.EqualTo(2));
+            Assert.That(target.Segments[0].To, Is.EqualTo(Vector3.up));
+            Assert.That(target.Segments[1].To, Is.EqualTo(Vector3.forward));
+        }
+
+        [Test]
+        public void RangedReplay_SegmentsAndDotsSliceIndependently()
+        {
+            // The two arrays fill at their own rates, so each needs its own range — a single index
+            // pair would silently mix one contributor's lines with another's markers.
+            var buffer = new DebugDrawBuffer();
+            buffer.Sphere(Vector3.zero, 1f, Color.white);
+
+            int segmentMark = buffer.SegmentCount;
+            int dotMark = buffer.DotCount;
+            buffer.Line(Vector3.zero, Vector3.right, Color.red);
+
+            var target = new CountingDrawer();
+            buffer.Replay(target, segmentMark, buffer.SegmentCount, dotMark, buffer.DotCount);
+
+            Assert.That(target.Segments, Has.Count.EqualTo(1));
+            Assert.That(target.Dots, Is.Empty, "the sphere belonged to the earlier contributor");
+        }
+
+        [Test]
+        public void RangedReplay_EmptyRange_DrawsNothing()
+        {
+            // What a contributor that drew nothing this frame produces. It must not read as "all".
+            var buffer = new DebugDrawBuffer();
+            buffer.Line(Vector3.zero, Vector3.right, Color.white);
+
+            var target = new CountingDrawer();
+            buffer.Replay(target, 1, 1, 0, 0);
+
+            Assert.That(target.Segments, Is.Empty);
+        }
+
+        [Test]
+        public void RangedReplay_OutOfBoundsIndices_AreClampedNotThrown()
+        {
+            // Ranges are marks taken around a call that may have been truncated by the segment cap.
+            // A debug overlay is the last place that should turn a bad frame into an exception.
+            var buffer = new DebugDrawBuffer();
+            buffer.Line(Vector3.zero, Vector3.right, Color.white);
+
+            var target = new CountingDrawer();
+
+            Assert.DoesNotThrow(() => buffer.Replay(target, -5, 999, -5, 999));
+            Assert.That(target.Segments, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void RangedReplay_ReversedRange_DrawsNothing()
+        {
+            var buffer = new DebugDrawBuffer();
+            buffer.Line(Vector3.zero, Vector3.right, Color.white);
+            buffer.Line(Vector3.zero, Vector3.up, Color.white);
+
+            var target = new CountingDrawer();
+            buffer.Replay(target, 2, 1, 0, 0);
+
+            Assert.That(target.Segments, Is.Empty);
+        }
     }
 }

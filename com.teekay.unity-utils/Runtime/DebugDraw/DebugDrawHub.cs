@@ -78,6 +78,35 @@ namespace TeekayUtils
         readonly List<(Vector3 Subject, Vector3 Position, string Text)> _labels =
             new List<(Vector3, Vector3, string)>(32);
 
+        /// <summary>
+        /// What one drawable contributed this frame, and which views it may appear in. The obvious
+        /// alternative — a buffer per surface — would mean describing a drawable once per surface,
+        /// breaking the exactly-once-per-frame promise that makes measuring inside
+        /// <see cref="IDebugDrawable.DrawDebug"/> safe. Recording ranges keeps the single pass and
+        /// moves the choice to replay time, which costs two integers per drawable per frame.
+        /// </summary>
+        readonly struct Contribution
+        {
+            public readonly DebugSurface Surfaces;
+            public readonly int SegmentStart, SegmentEnd, DotStart, DotEnd, LabelStart, LabelEnd;
+
+            public Contribution(DebugSurface surfaces, int segmentStart, int segmentEnd,
+                                int dotStart, int dotEnd, int labelStart, int labelEnd)
+            {
+                Surfaces = surfaces;
+                SegmentStart = segmentStart;
+                SegmentEnd = segmentEnd;
+                DotStart = dotStart;
+                DotEnd = dotEnd;
+                LabelStart = labelStart;
+                LabelEnd = labelEnd;
+            }
+
+            public bool Reaches(DebugSurface surface) => (Surfaces & surface) != 0;
+        }
+
+        readonly List<Contribution> _contributions = new List<Contribution>(8);
+
         // Reused every frame on both surfaces: projection and placement are per-view (the Scene view
         // and the Game view see the same world from different cameras), the collected facts are not.
         readonly List<DebugLabelLayout.Request> _labelRequests = new List<DebugLabelLayout.Request>(32);
@@ -205,6 +234,7 @@ namespace TeekayUtils
         {
             _buffer.Clear();
             _labels.Clear();
+            _contributions.Clear();
 
             if (!Enabled) return;
 
@@ -226,7 +256,30 @@ namespace TeekayUtils
 
                 if (!drawable.DebugEnabled) continue;
 
+                DebugSurface surfaces = drawable.Surfaces;
+                if (surfaces == DebugSurface.None) continue; // nowhere to put it; skip the work too
+
+                int segmentStart = _buffer.SegmentCount;
+                int dotStart = _buffer.DotCount;
+                int labelStart = _labels.Count;
+
                 drawable.DrawDebug(_buffer, this);
+
+                _contributions.Add(new Contribution(surfaces, segmentStart, _buffer.SegmentCount,
+                    dotStart, _buffer.DotCount, labelStart, _labels.Count));
+            }
+        }
+
+        /// <summary>Replays every contribution that this surface is allowed to show.</summary>
+        void ReplayTo(IDebugDrawer target, DebugSurface surface)
+        {
+            for (int i = 0; i < _contributions.Count; i++)
+            {
+                Contribution contribution = _contributions[i];
+                if (!contribution.Reaches(surface)) continue;
+
+                _buffer.Replay(target, contribution.SegmentStart, contribution.SegmentEnd,
+                    contribution.DotStart, contribution.DotEnd);
             }
         }
 
@@ -259,7 +312,7 @@ namespace TeekayUtils
         }
 
         /// <summary>Runs inside the renderer's open GL block — replay only, no GL.Begin/End here.</summary>
-        void OnRendererDrawing(IDebugDrawer drawer) => _buffer.Replay(drawer);
+        void OnRendererDrawing(IDebugDrawer drawer) => ReplayTo(drawer, DebugSurface.GameView);
 
         void OnGUI()
         {
@@ -289,19 +342,31 @@ namespace TeekayUtils
             Color previousColor = GUI.color;
             GUI.color = Color.white; // the plate and the text carry their own colours
 
+            DebugSurface surface = sceneView ? DebugSurface.SceneView : DebugSurface.GameView;
             _labelRequests.Clear();
 
-            foreach ((Vector3 subject, Vector3 position, string text) in _labels)
+            // Walked per contribution rather than over _labels directly, so a drawable kept out of
+            // this view keeps its TEXT out too. Missing that would leave labels floating with no
+            // shapes to belong to — worse than showing nothing, because they would read as
+            // annotating whatever else happened to be under them.
+            for (int c = 0; c < _contributions.Count; c++)
             {
-                if (!TryProjectToGui(position, sceneView, out Vector2 anchor)) continue;
+                Contribution contribution = _contributions[c];
+                if (!contribution.Reaches(surface)) continue;
 
-                _labelRequests.Add(new DebugLabelLayout.Request
+                for (int i = contribution.LabelStart; i < contribution.LabelEnd; i++)
                 {
-                    Anchor = anchor,
-                    Size = style.CalcSize(new GUIContent(text)),
-                    Text = text,
-                    Side = SideAwayFrom(subject, anchor, sceneView)
-                });
+                    (Vector3 subject, Vector3 position, string text) = _labels[i];
+                    if (!TryProjectToGui(position, sceneView, out Vector2 anchor)) continue;
+
+                    _labelRequests.Add(new DebugLabelLayout.Request
+                    {
+                        Anchor = anchor,
+                        Size = style.CalcSize(new GUIContent(text)),
+                        Text = text,
+                        Side = SideAwayFrom(subject, anchor, sceneView)
+                    });
+                }
             }
 
             DebugLabelLayout.Arrange(_labelRequests, _placedLabels, bounds);
@@ -420,7 +485,7 @@ namespace TeekayUtils
 
             // Shapes only. The labels for this same overlay are drawn in OnSceneGui, one pass later,
             // so nothing the gizmo pass draws can land on top of them.
-            _buffer.Replay(_gizmos);
+            ReplayTo(_gizmos, DebugSurface.SceneView);
         }
 #endif
     }

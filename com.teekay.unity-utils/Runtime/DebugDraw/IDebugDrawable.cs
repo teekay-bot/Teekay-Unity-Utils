@@ -29,9 +29,22 @@ namespace TeekayUtils
         bool DebugEnabled { get; }
 
         /// <summary>
+        /// Which views this overlay may appear in. Read once per frame alongside
+        /// <see cref="DebugEnabled"/>, so it can be changed at runtime.
+        /// <para>
+        /// Answer <see cref="DebugSurface.All"/> unless there is a reason not to — the common one
+        /// being that the shapes are geometry, which reads far better in a Scene view the user can
+        /// orbit than painted over the game they are trying to play.
+        /// </para>
+        /// </summary>
+        DebugSurface Surfaces { get; }
+
+        /// <summary>
         /// Draw this frame's measured state. Called EXACTLY ONCE per frame, whatever surfaces are
         /// listening, so measuring in here (an extra raycast to explain a verdict, a string built
-        /// for a label) is safe — a call site that must not repeat cannot be repeated.
+        /// for a label) is safe — a call site that must not repeat cannot be repeated. Note that
+        /// this stays true no matter what <see cref="Surfaces"/> says: the hub filters at REPLAY
+        /// time, never by asking a drawable to describe itself twice.
         /// </summary>
         /// <param name="drawer">Records the shapes; replayed to every active surface afterwards.</param>
         /// <param name="labels">World-anchored text. An unlabeled arrow reads as "some arrow".</param>

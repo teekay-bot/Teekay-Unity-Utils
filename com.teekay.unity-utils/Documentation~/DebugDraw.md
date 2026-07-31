@@ -142,6 +142,7 @@ public sealed partial class Motor : MonoBehaviour, IDebugDrawable
     [SerializeField] bool _drawGrounding = true;
 
     public bool DebugEnabled => _drawGrounding;
+    public DebugSurface Surfaces => DebugSurface.All;
 
     void OnEnable()
     {
@@ -169,6 +170,31 @@ prefab, no scene object, nothing to forget when a character is spawned at runtim
 | Scene view | Its own `OnDrawGizmos`, gated to Scene-view cameras so Game-view gizmos don't double-draw |
 | Labels | IMGUI with a shadow (readable on any scenery) in the Game view, `Handles.Label` in the Scene view |
 | Toggles | `debugdraw` master + one console variable per registered toggle |
+
+### Choosing which views an overlay appears in
+
+`Surfaces` answers that per drawable and per frame, so two overlays in one scene can differ. Return
+`DebugSurface.All` unless there is a reason not to — and there often is:
+
+| Overlay is about | Wants |
+|---|---|
+| Screen-space work (what the aim is picking, a cull boundary) | `GameView` — it has no meaning from another angle |
+| Geometry (a capsule, a ground probe, a contact normal) | `SceneView`, where the camera can orbit the shapes and the game stays clear |
+
+Back it with two serialized bools and the Inspector gets both switches for free:
+
+```csharp
+public DebugSurface Surfaces =>
+    (_gameView  ? DebugSurface.GameView  : DebugSurface.None) |
+    (_sceneView ? DebugSurface.SceneView : DebugSurface.None);
+```
+
+Deliberately **not** one global switch on the hub: a global would need a checkbox on every component
+writing to it — one flag with N owners, which is how two Inspectors end up disagreeing about what is
+on. Filtering happens at *replay* time, so `DrawDebug` is still called exactly once per frame
+whatever this returns; a drawable is never asked to describe itself twice. If your overlay draws
+anything from its own `OnGUI` (a screen-space ring, say), gate that on the same flag yourself — the
+hub can only filter what the hub draws.
 
 ### Why the owner draws its own state
 

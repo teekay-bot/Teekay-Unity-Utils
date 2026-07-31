@@ -4,6 +4,41 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-08-01
+
+### Added
+
+- **`IDebugDrawable.Surfaces`** and the `DebugSurface` flags enum — an overlay now says which views
+  it may appear in, and the hub honours it per drawable. Two overlays in one scene can differ, and
+  usually should: one describing screen-space work (what the aim is picking, a cull boundary) is
+  meaningless from another angle, while one describing geometry (a capsule, a ground probe, a contact
+  normal) reads far better in a Scene view you can orbit than painted over the game you are trying to
+  play. Back it with two serialized bools and the component's Inspector gets both switches for free.
+  Deliberately not one global switch on the hub: a global would need a checkbox on every component
+  writing to it — one flag with N owners, which is how two Inspectors end up disagreeing about what
+  is on.
+- **`DebugDrawBuffer.Replay(target, fromSegment, toSegment, fromDot, toDot)`** — replays one slice of
+  a recording. Counts only grow while a frame is being collected, so reading `SegmentCount` and
+  `DotCount` around each contributor yields a range per contributor. Indices are clamped rather than
+  rejected: the marks come from a call that may have been truncated by the segment cap, and a debug
+  overlay is the last place that should turn a bad frame into an exception.
+
+### Changed
+
+- **`DebugDrawHub` records a range per drawable and filters at REPLAY time.** The obvious
+  alternative — one buffer per surface — would have meant describing a drawable once per surface,
+  breaking the exactly-once-per-frame promise that makes measuring inside `DrawDebug` safe. Labels
+  go through the same ranges, so an overlay kept out of a view keeps its TEXT out too; labels
+  floating with no shapes to belong to are worse than none, because they read as annotating whatever
+  else happens to be underneath.
+- A drawable answering `DebugSurface.None` is skipped before `DrawDebug` is called, so switching an
+  overlay off by surface saves the measuring as well as the drawing.
+
+### Breaking
+
+- `IDebugDrawable` gained a member. Existing implementations need
+  `public DebugSurface Surfaces => DebugSurface.All;` to keep behaving as they did.
+
 ## [3.4.2] - 2026-07-30
 
 ### Added
