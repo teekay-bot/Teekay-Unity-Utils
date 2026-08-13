@@ -1,13 +1,13 @@
 # Teekay Unity Utils
 
-[![Unity 6000.3+](https://img.shields.io/badge/Unity-6000.3%20LTS%2B-000?logo=unity)](https://unity.com/releases/editor/whats-new/6000.3)
+[![Unity 6000.5+](https://img.shields.io/badge/Unity-6000.5%2B-000?logo=unity)](https://unity.com/releases/editor/whats-new/6000.5)
 [![UPM](https://img.shields.io/badge/UPM-git%20URL-2296F3)](../README.md#installation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE.md)
 
 Curated Unity utilities: extension methods, singletons, an event bus, gameplay tags, debug
 drawing, and an in-game developer console. Small, tested, zero prefabs — everything is plain code.
 
-**Requires Unity 6000.3 (Unity 6.3 LTS) or newer.**
+**Requires Unity 6000.5 (Unity 6.5) or newer.**
 **Install:** see [Installation](../README.md#installation) in the repository README.
 
 ---

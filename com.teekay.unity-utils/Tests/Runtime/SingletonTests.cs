@@ -28,9 +28,9 @@ namespace TeekayUtils.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            foreach (var s in Object.FindObjectsByType<TestSingleton>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var s in Object.FindObjectsByType<TestSingleton>(FindObjectsInactive.Include))
                 Object.Destroy(s.gameObject);
-            foreach (var s in Object.FindObjectsByType<TestPersistentSingleton>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var s in Object.FindObjectsByType<TestPersistentSingleton>(FindObjectsInactive.Include))
                 Object.Destroy(s.gameObject);
             yield return null;
             TestSingleton.ResetStatic();
@@ -64,7 +64,7 @@ namespace TeekayUtils.Tests
             var s = go.AddComponent<TestSingleton>();
 
             Assert.That(TestSingleton.Instance, Is.EqualTo(s));
-            Assert.That(Object.FindObjectsByType<TestSingleton>(FindObjectsInactive.Include, FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsByType<TestSingleton>(FindObjectsInactive.Include), Has.Length.EqualTo(1));
             yield return null;
         }
 

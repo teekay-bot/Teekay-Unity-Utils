@@ -11,7 +11,9 @@ A UPM package repo with two top-level parts:
 
 **The dev project folder MUST NOT have `~` in its path.** It used to be `DevProject~` and that silently broke MonoScript class binding for every registry package under its `Library/PackageCache` (TMP settings/fonts and `.inputactions` imported as empty artifacts with zero errors; survived Library wipes). Diagnose suspected recurrences with `MonoScript.GetClass()` on a registry-package script — null while the type exists at runtime means path-based hidden-folder poisoning.
 
-Requires Unity 6000.3 LTS; `DevProject` is pinned to **6000.3.19f1** (see `DevProject/ProjectSettings/ProjectVersion.txt`).
+Requires Unity 6000.5 (Unity 6.5 — a TECH-STREAM release, not LTS); `DevProject` is pinned to **6000.5.8f1** (see `DevProject/ProjectSettings/ProjectVersion.txt`).
+
+**The 6.5 floor is enforced by an API gap, not by taste (raised in 3.6.0, 2026-08-13).** 6.5 replaced the 32-bit `InstanceID` with the 64-bit `EntityId` struct and obsoleted everything that assumed instance-ID ordering — `Object.GetInstanceID()` as an **error**, `FindFirstObjectByType` and `FindObjectsSortMode` as warnings. The deciding fact, measured against both editors' `UnityEngine.CoreModule.dll` rather than recalled: **`FindObjectsByType<T>(FindObjectsInactive)` — the overload with no sort mode — does not exist in 6000.3**, so keeping both editors would have cost `#if` guards at every call site. ⚠️ When writing anything that hands Unity an id, `EntityId.None` is NOT `(EntityId)0`: the `int → EntityId` conversion is only an obsolete *warning* so the old literal still compiles, but it version-tags its input, and `(EntityId)0` comes back `IsValid() == true`.
 
 ## Assembly structure
 
@@ -23,17 +25,17 @@ Four asmdefs inside `com.teekay.unity-utils/`:
 
 ## Running tests
 
-In-editor: open `DevProject/` in Unity 6000.3.19f1 → **Window ▸ General ▸ Test Runner**. Always have a REAL scene open (e.g. `DemoHub`) before a PlayMode run — if the editor sits in a stale `InitTestScene`, runs hang at 0 tests.
+In-editor: open `DevProject/` in Unity 6000.5.8f1 → **Window ▸ General ▸ Test Runner**. Always have a REAL scene open (e.g. `DemoHub`) before a PlayMode run — if the editor sits in a stale `InitTestScene`, runs hang at 0 tests.
 
 CLI (editor must be CLOSED — check `DevProject/Temp/UnityLockfile` and the Unity process first):
 
 ```powershell
-& "C:\Program Files\Unity\Hub\Editor\6000.3.19f1\Editor\Unity.exe" -batchmode -projectPath "DevProject" -runTests -testPlatform EditMode -testResults "$PWD\test-results-editmode.xml" -logFile "$PWD\unity-test.log"
+& "C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Unity.exe" -batchmode -projectPath "DevProject" -runTests -testPlatform EditMode -testResults "$PWD\test-results-editmode.xml" -logFile "$PWD\unity-test.log"
 ```
 
 Use `-testPlatform PlayMode` for the PlayMode assembly, `-testFilter "Full.Test.Name"` for one test. Exit code 0 = all passed.
 
-Quick compile check without Unity (while the editor is open): build the `.cs` files with `dotnet` against the modular DLLs in `C:\Program Files\Unity\Hub\Editor\6000.3.19f1\Editor\Data\Managed\UnityEngine\` (CoreModule, PhysicsModule, UIModule, ... — for editor code use `UnityEditor.CoreModule.dll` from the same folder, never mix the monolithic `UnityEngine.dll` facade with modular DLLs) plus `DevProject/Library/ScriptAssemblies/` DLLs (UnityEngine.TestRunner, Unity.InputSystem, Unity.TextMeshPro, UnityEngine.UI) and NUnit. Set `<LangVersion>9.0</LangVersion>`. Catches compile errors only — NOT a substitute for running tests in Unity.
+Quick compile check without Unity (while the editor is open): build the `.cs` files with `dotnet` against the modular DLLs in `C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Data\Managed\UnityEngine\` (CoreModule, PhysicsModule, UIModule, ... — for editor code use `UnityEditor.CoreModule.dll` from the same folder, never mix the monolithic `UnityEngine.dll` facade with modular DLLs) plus `DevProject/Library/ScriptAssemblies/` DLLs (UnityEngine.TestRunner, Unity.InputSystem, Unity.TextMeshPro, UnityEngine.UI) and NUnit. Set `<LangVersion>9.0</LangVersion>`. Catches compile errors only — NOT a substitute for running tests in Unity.
 
 ## Critical workflow rules
 

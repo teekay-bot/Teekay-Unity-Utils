@@ -16,3 +16,7 @@ Thumbs.db
 .vs/
 .vscode/
 .idea/
+
+# Output of the batchmode test route documented in CLAUDE.md
+test-results-*.xml
+unity-test*.log

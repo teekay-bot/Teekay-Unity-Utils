@@ -18,7 +18,7 @@ public class SingletonDemoUI : MonoBehaviour
 
         var gm = DemoGameManager.TryGetInstance();
         GUILayout.Label(gm != null
-            ? $"DemoGameManager (persistent): '{gm.name}' id {gm.GetInstanceID()}, score {gm.Score}"
+            ? $"DemoGameManager (persistent): '{gm.name}' id {gm.GetEntityId()}, score {gm.Score}"
             : "DemoGameManager (persistent): none");
 
         var counter = DemoSceneCounter.TryGetInstance();

@@ -11,12 +11,12 @@ public class DemoGameManager : PersistentSingleton<DemoGameManager>
     protected override void Awake()
     {
         base.Awake();
-        Debug.Log($"[Demo] DemoGameManager.Awake on '{name}' (id {GetInstanceID()})");
+        Debug.Log($"[Demo] DemoGameManager.Awake on '{name}' (id {GetEntityId()})");
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        Debug.Log($"[Demo] DemoGameManager.OnDestroy on '{name}' (id {GetInstanceID()})");
+        Debug.Log($"[Demo] DemoGameManager.OnDestroy on '{name}' (id {GetEntityId()})");
     }
 }

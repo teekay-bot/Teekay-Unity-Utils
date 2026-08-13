@@ -31,7 +31,7 @@ namespace TeekayUtils
                     return null;
                 }
 
-                instance = FindFirstObjectByType<T>(FindObjectsInactive.Include);
+                instance = FindAnyObjectByType<T>(FindObjectsInactive.Include);
                 if (instance == null && Application.isPlaying)
                 {
                     var go = new GameObject($"{typeof(T).Name} (Auto-Generated)");

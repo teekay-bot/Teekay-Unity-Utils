@@ -903,7 +903,7 @@ namespace TeekayUtils.DevConsole.UI
         void EnsureEventSystem()
         {
             if (EventSystem.current != null) return;
-            if (Object.FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include) != null) return;
+            if (Object.FindAnyObjectByType<EventSystem>(FindObjectsInactive.Include) != null) return;
             GameObject es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             es.transform.SetParent(transform, false);
             _createdEventSystem = es.GetComponent<EventSystem>();
@@ -914,8 +914,7 @@ namespace TeekayUtils.DevConsole.UI
         void CleanupRedundantEventSystem()
         {
             if (_createdEventSystem == null) return;
-            EventSystem[] all = Object.FindObjectsByType<EventSystem>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            EventSystem[] all = Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include);
             foreach (EventSystem es in all)
             {
                 if (es != _createdEventSystem)

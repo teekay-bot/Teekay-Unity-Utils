@@ -1,13 +1,13 @@
 # Teekay Unity Utils
 
-[![Unity 6000.3+](https://img.shields.io/badge/Unity-6000.3%20LTS%2B-000?logo=unity)](https://unity.com/releases/editor/whats-new/6000.3)
+[![Unity 6000.5+](https://img.shields.io/badge/Unity-6000.5%2B-000?logo=unity)](https://unity.com/releases/editor/whats-new/6000.5)
 [![Release](https://img.shields.io/github/v/tag/teekay-bot/Teekay-Unity-Utils?label=release&color=2296F3)](https://github.com/teekay-bot/Teekay-Unity-Utils/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](com.teekay.unity-utils/LICENSE.md)
 
 Curated Unity utilities: extension methods, singletons, an event bus, gameplay tags, debug
 drawing, and an in-game developer console. Small, tested, zero prefabs — everything is plain code.
 
-**Requires Unity 6000.3 (Unity 6.3 LTS) or newer.**
+**Requires Unity 6000.5 (Unity 6.5) or newer.**
 
 <table>
 <tr>
@@ -55,7 +55,7 @@ Start with the [package README](com.teekay.unity-utils/README.md) for a quick to
 - [`com.teekay.unity-utils/`](com.teekay.unity-utils/) — the UPM package
   ([README](com.teekay.unity-utils/README.md) · [CHANGELOG](com.teekay.unity-utils/CHANGELOG.md) ·
   [LICENSE](com.teekay.unity-utils/LICENSE.md)).
-- [`DevProject/`](DevProject/) — Unity 6000.3 host project for development: tests (Test Runner) and
+- [`DevProject/`](DevProject/) — Unity 6000.5 host project for development: tests (Test Runner) and
   per-feature demo scenes. Open `DemoHub` and press Play. Not shipped to consumers — the `?path=` install
   URL scopes them to the package folder only.
 

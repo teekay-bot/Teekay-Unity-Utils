@@ -4,7 +4,28 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.5.0] - 2026-08-01
+## [3.6.0] - 2026-08-13
+
+### Changed
+
+- ⚠️ **Minimum editor is now Unity 6000.5 (Unity 6.5); 6000.3 is no longer supported.** Not a
+  preference — 6.5 replaced the 32-bit `InstanceID` with the 64-bit `EntityId` struct and obsoleted
+  the APIs that assumed instance-ID ordering, and the replacements are not all present in 6.3. The
+  one that forces the floor is `FindObjectsByType<T>(FindObjectsInactive)`: the overload without a
+  `FindObjectsSortMode` **does not exist in 6000.3** (measured against both editors'
+  `UnityEngine.CoreModule.dll`), so supporting both editors would have meant `#if` guards around
+  every call. Note this is a REQUIREMENT change, not an API change — nothing this package exposes
+  moved, so consuming code needs no edits.
+- **`Singleton<T>.Instance` and the DevConsole's EventSystem check use `FindAnyObjectByType`** where
+  they used `FindFirstObjectByType`. The old one promised "first by instance-ID order", an ordering
+  6.5 no longer has — and neither caller ever wanted an order: a singleton lookup expects exactly one
+  match, and the EventSystem check is a null test. `FindAnyObjectByType` is also the faster of the
+  two. Behaviour is unchanged; if a scene ever held two of a singleton, *which* one you got was
+  already arbitrary in practice.
+- **`FindObjectsSortMode.None` arguments dropped** (DevConsole EventSystem cleanup, `SingletonTests`
+  teardown). The enum is obsolete in 6.5 and the parameterless overload is the replacement.
+
+
 
 ### Added
 
