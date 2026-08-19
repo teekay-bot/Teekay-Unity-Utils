@@ -132,7 +132,7 @@ namespace TeekayUtils.Tests
             Assert.IsEmpty(SubclassSelectorTypes.GetSelectable(null));
         }
 
-        // --- GetShippable / IsFromTestAssembly ---------------------------------------------
+        // --- GetShippable / ShipsInBuild ---------------------------------------------------
 
         /// <summary>
         /// The fixtures in this file are the proof, and they are it BY CONSTRUCTION: they are declared
@@ -140,7 +140,7 @@ namespace TeekayUtils.Tests
         /// the case to hold.
         /// </summary>
         [Test]
-        public void GetShippable_ExcludesTypesFromTestAssemblies()
+        public void GetShippable_ExcludesWhatAPlayerBuildWillNotContain()
         {
             CollectionAssert.DoesNotContain(
                 SubclassSelectorTypes.GetShippable(typeof(ISubclassSelectorFixture)),
@@ -150,7 +150,8 @@ namespace TeekayUtils.Tests
         /// <summary>
         /// The control for the test above. Without it, that one passes just as well when
         /// <see cref="SubclassSelectorTypes.GetShippable"/> returns nothing at all — which would be a
-        /// dropdown with no entries rather than a filter that works.
+        /// dropdown with no entries rather than a filter that works. That is not a hypothetical
+        /// failure mode: the first version of this rule did exactly that, and it reached a release.
         /// </summary>
         [Test]
         public void GetSelectable_StillIncludesWhatGetShippableFiltersOut()
@@ -160,14 +161,20 @@ namespace TeekayUtils.Tests
                 typeof(SelectableFixture));
         }
 
+        /// <summary>
+        /// Both directions, because a predicate that answers "no" to everything satisfies the exclusion
+        /// tests above on its own. The runtime type is the half that caught the 4.1.0 mistake.
+        /// </summary>
         [Test]
-        public void IsFromTestAssembly_SeparatesThisAssemblyFromTheShippedOne()
+        public void ShipsInBuild_SeparatesRuntimeAssembliesFromTheRest()
         {
-            Assert.IsTrue(SubclassSelectorTypes.IsFromTestAssembly(typeof(SelectableFixture)),
+            Assert.IsTrue(SubclassSelectorTypes.ShipsInBuild(typeof(TeekayUtils.Events.EventBus)),
+                "the package's RUNTIME assembly is in a player build");
+            Assert.IsFalse(SubclassSelectorTypes.ShipsInBuild(typeof(SelectableFixture)),
                 "this file compiles into a test assembly");
-            Assert.IsFalse(SubclassSelectorTypes.IsFromTestAssembly(typeof(SubclassSelectorTypes)),
-                "the package's own editor assembly ships");
-            Assert.IsFalse(SubclassSelectorTypes.IsFromTestAssembly(null), "null");
+            Assert.IsFalse(SubclassSelectorTypes.ShipsInBuild(typeof(SubclassSelectorTypes)),
+                "an editor assembly is not in a player build either");
+            Assert.IsFalse(SubclassSelectorTypes.ShipsInBuild(null), "null");
         }
 
         // --- BuildMenuLabels --------------------------------------------------------------

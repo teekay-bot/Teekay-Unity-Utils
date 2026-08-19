@@ -61,11 +61,13 @@ Only types Unity can actually store in a managed reference:
 | Not a value type | Managed references hold classes. |
 | `[Serializable]` | Without it the value serializes as null. |
 | Public parameterless constructor | The drawer constructs the instance. |
-| Not declared in a test assembly | It exists in no player build, so picking one stores a reference that reads back null there — and only there. |
+| Compiled into an assembly a build contains | A test-only or editor-only type stores fine and then reads back null in the player, and only there. Applied only when the object being edited is itself something a build contains. |
 
 The first five are about storage: a type failing one of them serializes as null, so offering it would
 be worse than omitting it. The sixth is about REACH — a test double stores perfectly well and then
 is missing from the build, which is the same symptom arriving later and somewhere you cannot see it.
+It is skipped for a field on an editor-only object, where an editor-only implementor is a legitimate
+choice and there is no player to be missing from.
 
 Two types sharing a short name are disambiguated by namespace — `GenericMenu` merges entries with
 identical labels, so one would otherwise disappear.
@@ -77,10 +79,10 @@ identical labels, so one would otherwise disappear.
 | Method | Notes |
 |---|---|
 | `ResolveFieldType(managedReferenceFieldTypename)` | Turns Unity's `"<assembly> <type>"` format into a `Type`. Null when malformed. |
-| `IsSelectable(type)` | The first five rows above, as one predicate. The sixth is `IsFromTestAssembly`. |
+| `IsSelectable(type)` | The first five rows above, as one predicate. The sixth is `ShipsInBuild`. |
 | `GetSelectable(fieldType)` | Assignable selectable types, sorted by name. Includes `fieldType` itself when it qualifies. Does NOT apply the test-assembly rule — it answers "what can Unity store", which is a property of the type alone. |
-| `GetShippable(fieldType)` | What the dropdown actually offers: `GetSelectable` minus test assemblies. |
-| `IsFromTestAssembly(type)` | Whether the declaring assembly references the test runner or NUnit. |
+| `GetShippable(fieldType)` | `GetSelectable` minus types no player build contains. What the dropdown offers on an object that ships. |
+| `ShipsInBuild(type)` | Whether the declaring assembly is in `AssembliesType.PlayerWithoutTestAssemblies`. |
 | `BuildMenuLabels(types)` | Menu labels parallel to the list, namespace-qualified where names collide. |
 
 The attribute is a pure marker with no runtime logic; the drawer is editor-only, so it costs a build

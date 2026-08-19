@@ -109,7 +109,13 @@ namespace TeekayUtils.EditorTools
             Type fieldType = SubclassSelectorTypes.ResolveFieldType(property.managedReferenceFieldTypename);
             if (fieldType == null) return;
 
-            List<Type> types = SubclassSelectorTypes.GetShippable(fieldType);
+            // Filter to what a build contains only when the object being edited is itself something a
+            // build contains. On an editor-only object an editor-only implementor is a legitimate
+            // choice, and the whole point of the filter — "this would be null in the player" — does not
+            // apply to something the player never loads.
+            List<Type> types = SubclassSelectorTypes.ShipsInBuild(property.serializedObject.targetObject.GetType())
+                ? SubclassSelectorTypes.GetShippable(fieldType)
+                : SubclassSelectorTypes.GetSelectable(fieldType);
             string[] labels = SubclassSelectorTypes.BuildMenuLabels(types);
             Type current = property.hasMultipleDifferentValues ? null : CurrentType(property);
 

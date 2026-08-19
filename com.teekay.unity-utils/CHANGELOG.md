@@ -4,7 +4,30 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.1.0] - 2026-08-19
+## [4.1.1] - 2026-08-19
+
+### Fixed
+
+- ⚠️ **4.1.0's filter was wrong and removed types that DO ship. Skip 4.1.0.** It called an assembly a
+  test assembly when it referenced `UnityEngine.TestRunner` or `nunit.framework`, which sounds
+  discriminating and is not: Unity auto-references the TestRunner into **every editor assembly**, and
+  `nunit.framework.dll` is an auto-referenced precompiled assembly that landed on **159 of 326**
+  compile lines in one ordinary project — ordinary runtime assemblies included. The result was a
+  dropdown that hid almost everything, and a consuming project lost the identity colours it derives
+  from that list. Measured out of `Library/Bee/artifacts/*.dag/*.rsp`, which is the compiler's own
+  command line, rather than reasoned about a second time.
+- **`ShipsInBuild(type)` replaces `IsFromTestAssembly(type)`**: membership of
+  `AssembliesType.PlayerWithoutTestAssemblies`, i.e. the build question asked directly instead of
+  inferred from references. `GetShippable` filters on it.
+  - The honest cost, and 4.1.0 existed to dodge it: this also excludes ordinary EDITOR-only
+    implementors. **The drawer resolves that where the information actually is** — it filters only
+    when the object being edited is itself in a player build. On an editor-only object an editor-only
+    implementor is a legitimate choice and there is no player for it to be missing from.
+- Tests gained the direction that would have caught this: `ShipsInBuild` must answer **true** for a
+  runtime type, not merely false for the fixtures. A predicate that says "no" to everything satisfies
+  an exclusion test on its own.
+
+## [4.1.0] - 2026-08-19 — ⚠️ BROKEN, use 4.1.1
 
 ### Fixed
 
