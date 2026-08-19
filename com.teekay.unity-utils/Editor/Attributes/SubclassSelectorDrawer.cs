@@ -109,7 +109,7 @@ namespace TeekayUtils.EditorTools
             Type fieldType = SubclassSelectorTypes.ResolveFieldType(property.managedReferenceFieldTypename);
             if (fieldType == null) return;
 
-            List<Type> types = SubclassSelectorTypes.GetSelectable(fieldType);
+            List<Type> types = SubclassSelectorTypes.GetShippable(fieldType);
             string[] labels = SubclassSelectorTypes.BuildMenuLabels(types);
             Type current = property.hasMultipleDifferentValues ? null : CurrentType(property);
 

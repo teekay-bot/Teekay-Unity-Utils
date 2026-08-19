@@ -4,6 +4,33 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-08-19
+
+### Fixed
+
+- **`[SubclassSelector]` no longer offers types declared in test assemblies.** A test double satisfies
+  every storability rule the dropdown knew about, so nothing kept it out — and picking one writes
+  `asm: Something.Tests` into the scene, an assembly no player build contains. The field then reads
+  back null **in the build and nowhere else**, which is the worst place for a difference to appear.
+  This is not hypothetical: a fixture sat beside the real implementations in a consuming project on
+  2026-08-11, and the only thing that had been keeping it out was the author having remembered to
+  give it a non-public constructor.
+  - A test assembly is one that **references the test runner or NUnit** — not "everything outside
+    `AssembliesType.PlayerWithoutTestAssemblies`", which would also drop every ordinary editor
+    assembly and leave a `[SubclassSelector]` field on an editor-only object with no choices at all.
+    The rule removes what it means to remove.
+
+### Added
+
+- **`SubclassSelectorTypes.GetShippable(fieldType)`** — `GetSelectable` minus test assemblies; what
+  the drawer now calls. **`IsFromTestAssembly(type)`** — the predicate behind it, cached per domain.
+- ⚠️ **`GetSelectable` and `IsSelectable` are unchanged and stay unfiltered**, deliberately. They
+  answer *what can Unity store*, which is a property of the type alone; this package's own tests
+  declare their fixtures in a test assembly, so filtering there would make those functions untestable
+  by construction. That constraint is also what makes the new tests strong: the same fixture must be
+  visible to `GetSelectable` and invisible to `GetShippable`, and it is in a test assembly BY
+  CONSTRUCTION rather than by anyone remembering to mark it.
+
 ## [4.0.0] - 2026-08-19
 
 ### Removed

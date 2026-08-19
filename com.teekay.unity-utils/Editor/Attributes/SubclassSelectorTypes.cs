@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
+using UnityEditor.Compilation;
+using CompilationAssembly = UnityEditor.Compilation.Assembly;
 
 namespace TeekayUtils.EditorTools
 {
@@ -67,6 +70,101 @@ namespace TeekayUtils.EditorTools
             results.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
             return results;
         }
+
+        /// <summary>
+        /// Every shippable type assignable to <paramref name="fieldType"/> — <see cref="GetSelectable"/>
+        /// minus anything declared in a test assembly. This is what the dropdown offers.
+        /// </summary>
+        /// <remarks>
+        /// A test double is storable by every rule <see cref="IsSelectable"/> knows, so nothing there
+        /// can keep it out of the menu — and picking one writes <c>asm: Something.Tests</c> into the
+        /// scene, an assembly no player build contains, so the field reads back null in the build and
+        /// nowhere else. That happened: a fixture sat beside the real implementations for a few hours
+        /// on 2026-08-11, and the only thing that had been keeping it out was the author remembering
+        /// to give it a non-public constructor.
+        /// <para>
+        /// <see cref="GetSelectable"/> stays unfiltered on purpose. It answers "what can Unity store",
+        /// which is a property of the type alone, and this package's own tests declare their fixtures
+        /// in a test assembly — filtering there would leave the function untestable by construction.
+        /// </para>
+        /// </remarks>
+        public static List<Type> GetShippable(Type fieldType)
+        {
+            List<Type> types = GetSelectable(fieldType);
+
+            for (int i = types.Count - 1; i >= 0; i--)
+            {
+                if (IsFromTestAssembly(types[i])) types.RemoveAt(i);
+            }
+
+            return types;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="type"/> is declared in a test assembly, i.e. one that references
+        /// the test runner or NUnit.
+        /// </summary>
+        /// <remarks>
+        /// Asking "does it reference the test runner" rather than taking
+        /// <c>AssembliesType.PlayerWithoutTestAssemblies</c> and treating the remainder as tests: that
+        /// set also excludes every ordinary EDITOR assembly, so a <c>[SubclassSelector]</c> field on an
+        /// editor-only object would lose all of its choices — a silent regression traded for four
+        /// fewer lines. This rule removes what it means to remove.
+        /// </remarks>
+        public static bool IsFromTestAssembly(Type type)
+        {
+            if (type == null) return false;
+
+            // Cached because a dropdown opens repeatedly and this walks the whole compilation graph.
+            // A static field is the right lifetime: changing an asmdef reloads the domain, which
+            // clears it.
+            s_testAssemblyNames ??= CollectTestAssemblyNames();
+            return s_testAssemblyNames.Contains(type.Assembly.GetName().Name);
+        }
+
+        static HashSet<string> s_testAssemblyNames;
+
+        static HashSet<string> CollectTestAssemblyNames()
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            // Both sets: an EditMode suite is an editor assembly, a PlayMode suite is a player one.
+            AddTestAssemblies(CompilationPipeline.GetAssemblies(AssembliesType.Editor), names);
+            AddTestAssemblies(CompilationPipeline.GetAssemblies(AssembliesType.Player), names);
+
+            return names;
+        }
+
+        static void AddTestAssemblies(CompilationAssembly[] assemblies, HashSet<string> names)
+        {
+            foreach (CompilationAssembly assembly in assemblies)
+            {
+                if (ReferencesTestRunner(assembly)) names.Add(assembly.name);
+            }
+        }
+
+        static bool ReferencesTestRunner(CompilationAssembly assembly)
+        {
+            // Two lists, because the two halves of a test asmdef arrive by different routes: the
+            // TestRunner assemblies are compiled from a package (assemblyReferences), while
+            // nunit.framework.dll is a precompiled reference (compiledAssemblyReferences, full paths).
+            foreach (CompilationAssembly reference in assembly.assemblyReferences)
+            {
+                if (IsTestRunnerName(reference.name)) return true;
+            }
+
+            foreach (string path in assembly.compiledAssemblyReferences)
+            {
+                if (IsTestRunnerName(Path.GetFileNameWithoutExtension(path))) return true;
+            }
+
+            return false;
+        }
+
+        static bool IsTestRunnerName(string name) =>
+            name == "UnityEngine.TestRunner"
+            || name == "UnityEditor.TestRunner"
+            || name == "nunit.framework";
 
         /// <summary>
         /// Menu labels parallel to <paramref name="types"/>. Two implementations in different

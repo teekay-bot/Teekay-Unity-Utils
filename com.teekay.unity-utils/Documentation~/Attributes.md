@@ -61,10 +61,14 @@ Only types Unity can actually store in a managed reference:
 | Not a value type | Managed references hold classes. |
 | `[Serializable]` | Without it the value serializes as null. |
 | Public parameterless constructor | The drawer constructs the instance. |
+| Not declared in a test assembly | It exists in no player build, so picking one stores a reference that reads back null there — and only there. |
 
-A type failing any of these would silently serialize as null, so offering it would be worse than
-omitting it. Two types sharing a short name are disambiguated by namespace — `GenericMenu` merges
-entries with identical labels, so one would otherwise disappear.
+The first five are about storage: a type failing one of them serializes as null, so offering it would
+be worse than omitting it. The sixth is about REACH — a test double stores perfectly well and then
+is missing from the build, which is the same symptom arriving later and somewhere you cannot see it.
+
+Two types sharing a short name are disambiguated by namespace — `GenericMenu` merges entries with
+identical labels, so one would otherwise disappear.
 
 ### Reusing the type discovery
 
@@ -73,8 +77,10 @@ entries with identical labels, so one would otherwise disappear.
 | Method | Notes |
 |---|---|
 | `ResolveFieldType(managedReferenceFieldTypename)` | Turns Unity's `"<assembly> <type>"` format into a `Type`. Null when malformed. |
-| `IsSelectable(type)` | The table above, as one predicate. |
-| `GetSelectable(fieldType)` | Assignable selectable types, sorted by name. Includes `fieldType` itself when it qualifies. |
+| `IsSelectable(type)` | The first five rows above, as one predicate. The sixth is `IsFromTestAssembly`. |
+| `GetSelectable(fieldType)` | Assignable selectable types, sorted by name. Includes `fieldType` itself when it qualifies. Does NOT apply the test-assembly rule — it answers "what can Unity store", which is a property of the type alone. |
+| `GetShippable(fieldType)` | What the dropdown actually offers: `GetSelectable` minus test assemblies. |
+| `IsFromTestAssembly(type)` | Whether the declaring assembly references the test runner or NUnit. |
 | `BuildMenuLabels(types)` | Menu labels parallel to the list, namespace-qualified where names collide. |
 
 The attribute is a pure marker with no runtime logic; the drawer is editor-only, so it costs a build

@@ -132,6 +132,44 @@ namespace TeekayUtils.Tests
             Assert.IsEmpty(SubclassSelectorTypes.GetSelectable(null));
         }
 
+        // --- GetShippable / IsFromTestAssembly ---------------------------------------------
+
+        /// <summary>
+        /// The fixtures in this file are the proof, and they are it BY CONSTRUCTION: they are declared
+        /// in a test assembly because this is one, so nothing has to be remembered or annotated for
+        /// the case to hold.
+        /// </summary>
+        [Test]
+        public void GetShippable_ExcludesTypesFromTestAssemblies()
+        {
+            CollectionAssert.DoesNotContain(
+                SubclassSelectorTypes.GetShippable(typeof(ISubclassSelectorFixture)),
+                typeof(SelectableFixture));
+        }
+
+        /// <summary>
+        /// The control for the test above. Without it, that one passes just as well when
+        /// <see cref="SubclassSelectorTypes.GetShippable"/> returns nothing at all — which would be a
+        /// dropdown with no entries rather than a filter that works.
+        /// </summary>
+        [Test]
+        public void GetSelectable_StillIncludesWhatGetShippableFiltersOut()
+        {
+            CollectionAssert.Contains(
+                SubclassSelectorTypes.GetSelectable(typeof(ISubclassSelectorFixture)),
+                typeof(SelectableFixture));
+        }
+
+        [Test]
+        public void IsFromTestAssembly_SeparatesThisAssemblyFromTheShippedOne()
+        {
+            Assert.IsTrue(SubclassSelectorTypes.IsFromTestAssembly(typeof(SelectableFixture)),
+                "this file compiles into a test assembly");
+            Assert.IsFalse(SubclassSelectorTypes.IsFromTestAssembly(typeof(SubclassSelectorTypes)),
+                "the package's own editor assembly ships");
+            Assert.IsFalse(SubclassSelectorTypes.IsFromTestAssembly(null), "null");
+        }
+
         // --- BuildMenuLabels --------------------------------------------------------------
 
         [Test]
