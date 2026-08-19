@@ -4,6 +4,32 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-08-19
+
+### Removed
+
+- ⚠️ **BREAKING — `TeekayUtils.Tags` is gone**: `GameplayTag`, `TagSet`, `GameplayTagCatalog`,
+  `[GameplayTag]` + its drawer, `Documentation~/Tags.md`, and the 34 tests over them. Code that
+  compiles against v3.6.0 and uses any of those will not compile against 4.0.0.
+  - **Why, and it is not "unused code":** the feature was promoted INTO this package in 3.2.0 after
+    proving out under Teekay-Unity-Base's character ability layer, and that ability layer was its
+    only customer anywhere. On 2026-08-16 the layer stopped using it — the five `string[]` gates per
+    ability became two attributes matched by TYPE (`Type.IsInstanceOfType`), which is strictly
+    stronger for what they were actually doing: an interface now catches every implementor and a
+    base class every subclass, and the compiler checks the relationship the dotted paths could only
+    spell. Measured at the time: `activationBlockedTags` had **zero** declarers and the three
+    `activationOwnedTags` had **zero** production consumers. Keeping a project-wide vocabulary asset
+    and a custom drawer alive to express two relationships was the wrong trade.
+  - **Staying on tags is a supported choice** — pin the git URL to `#v3.6.0` and nothing changes.
+    Nothing else in 4.0.0 differs from 3.6.0, so that pin costs no other feature.
+  - **Migrating off**, if the tags were doing what ours were (gating one behaviour on another): put
+    the relationship on the type instead of in a string. Declare it with an attribute naming the
+    other type and resolve it with `Type.IsInstanceOfType`. What you lose is a runtime-authorable
+    vocabulary; what you gain is that a rename is a compile error rather than a silent mismatch.
+  - ⚠️ **A `GameplayTagCatalog.asset` in a consuming project survives this deletion as a broken
+    ScriptableObject** — its script reference no longer resolves. Delete the asset; there is no
+    runtime reader for it (there never was — the catalog was edit-time vocabulary only).
+
 ## [3.6.0] - 2026-08-13
 
 ### Changed
